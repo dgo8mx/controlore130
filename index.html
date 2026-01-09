@@ -1,0 +1,563 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Control de Determinantes - SEMARNAT Durango</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        .bg-institucional { background: linear-gradient(135deg, #13322B 0%, #1a4838 100%); }
+        .feature-card {
+            transition: all 0.3s ease;
+            border-left: 4px solid #10b981;
+        }
+        .feature-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        }
+        .check-icon {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+        }
+        .area-link {
+            transition: all 0.2s ease;
+        }
+        .area-link:hover {
+            transform: scale(1.05);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+        .formato-determinante {
+            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
+            border: 2px solid #cbd5e1;
+            padding: 2rem;
+            border-radius: 1rem;
+            margin: 2rem 0;
+        }
+        .formato-box {
+            background: white;
+            border: 2px dashed #64748b;
+            padding: 1.5rem;
+            border-radius: 0.5rem;
+            text-align: center;
+            font-family: 'Courier New', monospace;
+            font-weight: bold;
+            font-size: 1.5rem;
+            color: #1e293b;
+        }
+        .descripcion-item {
+            background: white;
+            padding: 0.75rem;
+            border-radius: 0.5rem;
+            border-left: 3px solid #10b981;
+            margin: 0.5rem 0;
+        }
+    </style>
+</head>
+<body class="bg-slate-50">
+    
+    <header class="bg-institucional text-white p-6 shadow-2xl">
+        <div class="container mx-auto">
+            <div class="flex items-center gap-4">
+                <img src="https://www.gob.mx/cms/uploads/image/file/488329/logo_semarnat.png" 
+                     class="h-16 bg-white p-3 rounded-lg shadow-lg" alt="SEMARNAT">
+                <div>
+                    <h1 class="text-3xl font-bold">Sistema de Control de Determinantes</h1>
+                    <p class="text-emerald-200 mt-1">SEMARNAT Durango - Versión 2.0.0</p>
+                    <p class="text-xs text-emerald-300 mt-1">
+                        <i class="fas fa-calendar-alt mr-1"></i> Actualizado: Enero 2026
+                    </p>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container mx-auto px-6 py-8">
+        
+        <div class="bg-white rounded-2xl shadow-xl p-8 mb-8">
+            <h2 class="text-2xl font-bold text-slate-800 mb-6">
+                <i class="fas fa-map-marked-alt text-emerald-600 mr-2"></i> Áreas Sustantivas de trabajo
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                
+                <a href="AREA_VO.html" target="_blank" class="area-link bg-gradient-to-br from-emerald-500 to-emerald-600 text-white p-6 rounded-xl shadow-lg">
+                    <div class="text-center">
+                        <div class="bg-white bg-opacity-20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <span class="text-2xl font-bold">VO</span>
+                        </div>
+                        <h3 class="font-bold text-lg">Centro de Atención Regional Villa Ocampo</h3>
+                        <p class="text-xs text-emerald-100 mt-2">Abrir área →</p>
+                    </div>
+                </a>
+                
+                <a href="AREA_AR.html" target="_blank" class="area-link bg-gradient-to-br from-blue-500 to-blue-600 text-white p-6 rounded-xl shadow-lg">
+                    <div class="text-center">
+                        <div class="bg-white bg-opacity-20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <span class="text-2xl font-bold">AR</span>
+                        </div>
+                        <h3 class="font-bold text-lg">Unidad de Aprovechamiento y Restauración</h3>
+                        <p class="text-xs text-blue-100 mt-2">Abrir área →</p>
+                    </div>
+                </a>
+                
+                <a href="AREA_CC.html" target="_blank" class="area-link bg-gradient-to-br from-purple-500 to-purple-600 text-white p-6 rounded-xl shadow-lg">
+                    <div class="text-center">
+                        <div class="bg-white bg-opacity-20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <span class="text-2xl font-bold">CC</span>
+                        </div>
+                        <h3 class="font-bold text-lg">Departamento de Contacto Ciudadano</h3>
+                        <p class="text-xs text-purple-100 mt-2">Abrir área →</p>
+                    </div>
+                </a>
+                
+                <a href="AREA_CU.html" target="_blank" class="area-link bg-gradient-to-br from-pink-500 to-pink-600 text-white p-6 rounded-xl shadow-lg">
+                    <div class="text-center">
+                        <div class="bg-white bg-opacity-20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <span class="text-2xl font-bold">CU</span>
+                        </div>
+                        <h3 class="font-bold text-lg">Departamento de Servicios Forestales y de Suelos</h3>
+                        <p class="text-xs text-pink-100 mt-2">Abrir área →</p>
+                    </div>
+                </a>
+                
+                <a href="AREA_DA.html" target="_blank" class="area-link bg-gradient-to-br from-indigo-500 to-indigo-600 text-white p-6 rounded-xl shadow-lg">
+                    <div class="text-center">
+                        <div class="bg-white bg-opacity-20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <span class="text-2xl font-bold">DA</span>
+                        </div>
+                        <h3 class="font-bold text-lg">Departamento de Administración</h3>
+                        <p class="text-xs text-indigo-100 mt-2">Abrir área →</p>
+                    </div>
+                </a>
+                
+                <a href="AREA_DG.html" target="_blank" class="area-link bg-gradient-to-br from-red-500 to-red-600 text-white p-6 rounded-xl shadow-lg">
+                    <div class="text-center">
+                        <div class="bg-white bg-opacity-20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <span class="text-2xl font-bold">DG</span>
+                        </div>
+                        <h3 class="font-bold text-lg">Coordinación Documentación Forestal Durango</h3>
+                        <p class="text-xs text-red-100 mt-2">Abrir área →</p>
+                    </div>
+                </a>
+                
+                <a href="AREA_ES.html" target="_blank" class="area-link bg-gradient-to-br from-yellow-500 to-yellow-600 text-white p-6 rounded-xl shadow-lg">
+                    <div class="text-center">
+                        <div class="bg-white bg-opacity-20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <span class="text-2xl font-bold">ES</span>
+                        </div>
+                        <h3 class="font-bold text-lg">Centro de Atención Regional El Salto</h3>
+                        <p class="text-xs text-yellow-100 mt-2">Abrir área →</p>
+                    </div>
+                </a>
+                
+                <a href="AREA_GA.html" target="_blank" class="area-link bg-gradient-to-br from-teal-500 to-teal-600 text-white p-6 rounded-xl shadow-lg">
+                    <div class="text-center">
+                        <div class="bg-white bg-opacity-20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <span class="text-2xl font-bold">GA</span>
+                        </div>
+                        <h3 class="font-bold text-lg">Unidad de Gestión Ambiental</h3>
+                        <p class="text-xs text-teal-100 mt-2">Abrir área →</p>
+                    </div>
+                </a>
+                
+                <a href="AREA_IA.html" target="_blank" class="area-link bg-gradient-to-br from-cyan-500 to-cyan-600 text-white p-6 rounded-xl shadow-lg">
+                    <div class="text-center">
+                        <div class="bg-white bg-opacity-20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <span class="text-2xl font-bold">IA</span>
+                        </div>
+                        <h3 class="font-bold text-lg">Departamento de Impacto y Riesgo Ambiental</h3>
+                        <p class="text-xs text-cyan-100 mt-2">Abrir área →</p>
+                    </div>
+                </a>
+                
+                <a href="AREA_SP.html" target="_blank" class="area-link bg-gradient-to-br from-orange-500 to-orange-600 text-white p-6 rounded-xl shadow-lg">
+                    <div class="text-center">
+                        <div class="bg-white bg-opacity-20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <span class="text-2xl font-bold">SP</span>
+                        </div>
+                        <h3 class="font-bold text-lg">Centro de Atención Regional Santiago Papasquiaro</h3>
+                        <p class="text-xs text-orange-100 mt-2">Abrir área →</p>
+                    </div>
+                </a>
+                
+                <a href="AREA_UJ.html" target="_blank" class="area-link bg-gradient-to-br from-slate-600 to-slate-700 text-white p-6 rounded-xl shadow-lg">
+                    <div class="text-center">
+                        <div class="bg-white bg-opacity-20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <span class="text-2xl font-bold">UJ</span>
+                        </div>
+                        <h3 class="font-bold text-lg">Unidad Jurídica</h3>
+                        <p class="text-xs text-slate-300 mt-2">Abrir área →</p>
+                    </div>
+                </a>
+
+                <a href="AREA_VS.html" target="_blank" class="area-link bg-gradient-to-br from-lime-500 to-lime-600 text-white p-6 rounded-xl shadow-lg">
+                    <div class="text-center">
+                        <div class="bg-white bg-opacity-20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <span class="text-2xl font-bold">VS</span>
+                        </div>
+                        <h3 class="font-bold text-lg">Enlace de Recursos Naturales y Vida Silvestre</h3>
+                        <p class="text-xs text-lime-100 mt-2">Abrir área →</p>
+                    </div>
+                </a>
+                
+            </div>
+        </div>
+
+        <div class="bg-white rounded-2xl shadow-xl p-8 mb-8">
+            <h2 class="text-2xl font-bold text-slate-800 mb-6">
+                <i class="fas fa-book text-blue-600 mr-2"></i> Guía de Uso del Sistema
+            </h2>
+            
+            <div class="space-y-6">
+                <div class="feature-card bg-slate-50 p-6 rounded-xl">
+                    <h3 class="text-lg font-bold text-slate-800 mb-3">
+                        <i class="fas fa-rocket text-emerald-600 mr-2"></i> 1. Inicio de Sesión
+                    </h3>
+                    <ul class="space-y-2 text-slate-600">
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-check text-emerald-600 mt-1"></i>
+                            <span>Al abrir cualquier área, el sistema automáticamente carga todos los datos desde la base concentradora</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-check text-emerald-600 mt-1"></i>
+                            <span>Los registros sincronizados aparecen con fondo azul y candado, no pueden editarse</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-check text-emerald-600 mt-1"></i>
+                            <span>Los registros locales pendientes aparecen con fondo amarillo y pueden editarse</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="feature-card bg-slate-50 p-6 rounded-xl">
+                    <h3 class="text-lg font-bold text-slate-800 mb-3">
+                        <i class="fas fa-plus-circle text-blue-600 mr-2"></i> 2. Captura de Determinantes
+                    </h3>
+                    <ul class="space-y-2 text-slate-600">
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-check text-blue-600 mt-1"></i>
+                            <span>Primero configure el catálogo de trámites en el panel lateral derecho</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-check text-blue-600 mt-1"></i>
+                            <span>Seleccione el trámite, ingrese bitácora (opcional) y asunto del determinante</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-check text-blue-600 mt-1"></i>
+                            <span>Los registros se guardan localmente y generan respaldo automático cada minuto</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="feature-card bg-slate-50 p-6 rounded-xl">
+                    <h3 class="text-lg font-bold text-slate-800 mb-3">
+                        <i class="fas fa-cloud-upload-alt text-purple-600 mr-2"></i> 3. Sincronización con la Nube
+                    </h3>
+                    <ul class="space-y-2 text-slate-600">
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-check text-purple-600 mt-1"></i>
+                            <span>Presione el botón "SINCRONIZAR" para enviar registros pendientes a la base concentradora</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-check text-purple-600 mt-1"></i>
+                            <span>Los registros sincronizados quedan bloqueados y no pueden editarse ni eliminarse</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-check text-purple-600 mt-1"></i>
+                            <span>El catálogo de trámites también se sincroniza automáticamente</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="feature-card bg-slate-50 p-6 rounded-xl">
+                    <h3 class="text-lg font-bold text-slate-800 mb-3">
+                        <i class="fas fa-shield-alt text-red-600 mr-2"></i> 4. Protección de Datos
+                    </h3>
+                    <ul class="space-y-2 text-slate-600">
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-check text-red-600 mt-1"></i>
+                            <span>Sistema de respaldo automático local genera archivos JSON cada minuto</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-check text-red-600 mt-1"></i>
+                            <span>Los registros sincronizados están protegidos contra edición y eliminación</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-check text-red-600 mt-1"></i>
+                            <span>Use el botón "EXPORTAR" para generar respaldos CSV manuales</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="feature-card bg-slate-50 p-6 rounded-xl">
+                    <h3 class="text-lg font-bold text-slate-800 mb-3">
+                        <i class="fas fa-sync-alt text-indigo-600 mr-2"></i> 5. Actualización de Datos
+                    </h3>
+                    <ul class="space-y-2 text-slate-600">
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-check text-indigo-600 mt-1"></i>
+                            <span>Presione "ACTUALIZAR" para traer los últimos datos de la base concentradora</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-check text-indigo-600 mt-1"></i>
+                            <span>El sistema fusiona datos locales pendientes con datos de la nube</span>
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <i class="fas fa-check text-indigo-600 mt-1"></i>
+                            <span>Use "PROBAR" para verificar la conexión con la base de datos</span>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- NUEVO APARTADO: PROCEDIMIENTO INTERNO -->
+        <div class="bg-white rounded-2xl shadow-xl p-8 mb-8">
+            <h2 class="text-2xl font-bold text-slate-800 mb-6">
+                <i class="fas fa-file-signature text-purple-600 mr-2"></i> PROCEDIMIENTO INTERNO: DETERMINANTES PARA OFICIOS
+            </h2>
+
+            <!-- Formato del Determinante -->
+            <div class="formato-determinante">
+                <h3 class="text-xl font-bold text-slate-700 mb-4 text-center">
+                    <i class="fas fa-hashtag text-emerald-600 mr-2"></i> Formato del Determinante
+                </h3>
+                
+                <div class="formato-box mb-6">
+                    OR-130/XX&nbsp;&nbsp;&nbsp;&nbsp;/####/2026
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div class="descripcion-item">
+                        <p class="text-xs font-bold text-slate-500 mb-1">OR-130</p>
+                        <p class="text-sm text-slate-700">Referencia a la Oficina de Representación en el Estado de Durango</p>
+                    </div>
+                    <div class="descripcion-item">
+                        <p class="text-xs font-bold text-slate-500 mb-1">XX</p>
+                        <p class="text-sm text-slate-700">Área sustantiva (Ver tabla de áreas)</p>
+                    </div>
+                    <div class="descripcion-item">
+                        <p class="text-xs font-bold text-slate-500 mb-1">####</p>
+                        <p class="text-sm text-slate-700">Número consecutivo a cuatro dígitos</p>
+                    </div>
+                </div>
+
+                <div class="bg-white p-4 rounded-lg border-2 border-slate-200">
+                    <h4 class="font-bold text-slate-700 mb-3">
+                        <i class="fas fa-info-circle text-blue-600 mr-2"></i> Descripción de Elementos
+                    </h4>
+                    <ul class="space-y-2 text-sm text-slate-600">
+                        <li><strong>OR-130:</strong> Referencia a la Oficina de Representación en el Estado de Durango</li>
+                        <li><strong>XX:</strong> Área sustantiva</li>
+                        <li><strong>2026:</strong> Año de expedición a cuatro dígitos</li>
+                        <li><strong>-:</strong> Espaciador</li>
+                        <li><strong>/:</strong> Separador</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Tabla de Áreas y Responsables -->
+            <div class="mt-8">
+                <h3 class="text-xl font-bold text-slate-700 mb-4">
+                    <i class="fas fa-users text-blue-600 mr-2"></i> Catálogo de Áreas y Responsables
+                </h3>
+
+                <div class="overflow-x-auto">
+                    <table class="w-full border-collapse bg-white shadow-lg rounded-lg overflow-hidden">
+                        <thead class="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white">
+                            <tr>
+                                <th class="p-4 text-left font-bold text-sm">No.</th>
+                                <th class="p-4 text-center font-bold text-sm">Clave</th>
+                                <th class="p-4 text-left font-bold text-sm">Nombre del Área</th>
+                                <th class="p-4 text-left font-bold text-sm">Responsable</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-200">
+                            <tr class="hover:bg-emerald-50 transition">
+                                <td class="p-4 text-slate-600 font-semibold">1</td>
+                                <td class="p-4 text-center">
+                                    <span class="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full font-bold text-sm">UJ</span>
+                                </td>
+                                <td class="p-4 text-slate-700 font-medium">Unidad Jurídica</td>
+                                <td class="p-4 text-slate-600">Francisco Javier Guardado Marín</td>
+                            </tr>
+                            <tr class="hover:bg-purple-50 transition">
+                                <td class="p-4 text-slate-600 font-semibold">2</td>
+                                <td class="p-4 text-center">
+                                    <span class="bg-purple-100 text-purple-800 px-3 py-1 rounded-full font-bold text-sm">CC</span>
+                                </td>
+                                <td class="p-4 text-slate-700 font-medium">Departamento de Contacto Ciudadano</td>
+                                <td class="p-4 text-slate-600">María de Lourdes Michel García</td>
+                            </tr>
+                            <tr class="hover:bg-indigo-50 transition">
+                                <td class="p-4 text-slate-600 font-semibold">3</td>
+                                <td class="p-4 text-center">
+                                    <span class="bg-indigo-100 text-indigo-800 px-3 py-1 rounded-full font-bold text-sm">DA</span>
+                                </td>
+                                <td class="p-4 text-slate-700 font-medium">Departamento de Administración</td>
+                                <td class="p-4 text-slate-600">Fidel Soto Montoya</td>
+                            </tr>
+                            <tr class="hover:bg-teal-50 transition">
+                                <td class="p-4 text-slate-600 font-semibold">4</td>
+                                <td class="p-4 text-center">
+                                    <span class="bg-teal-100 text-teal-800 px-3 py-1 rounded-full font-bold text-sm">GA</span>
+                                </td>
+                                <td class="p-4 text-slate-700 font-medium">Unidad de Gestión Ambiental</td>
+                                <td class="p-4 text-slate-600">Trinidad Valenzuela Hermosillo</td>
+                            </tr>
+                            <tr class="hover:bg-blue-50 transition">
+                                <td class="p-4 text-slate-600 font-semibold">5</td>
+                                <td class="p-4 text-center">
+                                    <span class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full font-bold text-sm">AR</span>
+                                </td>
+                                <td class="p-4 text-slate-700 font-medium">Unidad de Aprovechamiento y Restauración Forestal</td>
+                                <td class="p-4 text-slate-600">Rubén Lozano Orosco</td>
+                            </tr>
+                            <tr class="hover:bg-cyan-50 transition">
+                                <td class="p-4 text-slate-600 font-semibold">6</td>
+                                <td class="p-4 text-center">
+                                    <span class="bg-cyan-100 text-cyan-800 px-3 py-1 rounded-full font-bold text-sm">IA</span>
+                                </td>
+                                <td class="p-4 text-slate-700 font-medium">Departamento de Impacto y Riesgo Ambiental</td>
+                                <td class="p-4 text-slate-600">Elías Chacón de la Cruz</td>
+                            </tr>
+                            <tr class="hover:bg-pink-50 transition">
+                                <td class="p-4 text-slate-600 font-semibold">7</td>
+                                <td class="p-4 text-center">
+                                    <span class="bg-pink-100 text-pink-800 px-3 py-1 rounded-full font-bold text-sm">CU</span>
+                                </td>
+                                <td class="p-4 text-slate-700 font-medium">Departamento de Servicios Forestales y de Suelos</td>
+                                <td class="p-4 text-slate-600">Raúl Quiroga Gómez</td>
+                            </tr>
+                            <tr class="hover:bg-orange-50 transition">
+                                <td class="p-4 text-slate-600 font-semibold">8</td>
+                                <td class="p-4 text-center">
+                                    <span class="bg-orange-100 text-orange-800 px-3 py-1 rounded-full font-bold text-sm">SP</span>
+                                </td>
+                                <td class="p-4 text-slate-700 font-medium">Centro de Atención Regional Santiago Papasquiaro</td>
+                                <td class="p-4 text-slate-600">Brenda</td>
+                            </tr>
+                            <tr class="hover:bg-yellow-50 transition">
+                                <td class="p-4 text-slate-600 font-semibold">9</td>
+                                <td class="p-4 text-center">
+                                    <span class="bg-yellow-100 text-yellow-800 px-3 py-1 rounded-full font-bold text-sm">ES</span>
+                                </td>
+                                <td class="p-4 text-slate-700 font-medium">Centro de Atención Regional El Salto</td>
+                                <td class="p-4 text-slate-600">María Elena Díaz Mancinas</td>
+                            </tr>
+                            <tr class="hover:bg-emerald-50 transition">
+                                <td class="p-4 text-slate-600 font-semibold">10</td>
+                                <td class="p-4 text-center">
+                                    <span class="bg-emerald-100 text-emerald-800 px-3 py-1 rounded-full font-bold text-sm">VO</span>
+                                </td>
+                                <td class="p-4 text-slate-700 font-medium">Centro de Atención Regional Villa Ocampo</td>
+                                <td class="p-4 text-slate-600">Manuel Hernández Silerio</td>
+                            </tr>
+                            <tr class="hover:bg-red-50 transition">
+                                <td class="p-4 text-slate-600 font-semibold">11</td>
+                                <td class="p-4 text-center">
+                                    <span class="bg-red-100 text-red-800 px-3 py-1 rounded-full font-bold text-sm">DG</span>
+                                </td>
+                                <td class="p-4 text-slate-700 font-medium">Coordinación Documentación Forestal Durango</td>
+                                <td class="p-4 text-slate-600">María Azucena Corral Valdez</td>
+                            </tr>
+                            <tr class="hover:bg-lime-50 transition">
+                                <td class="p-4 text-slate-600 font-semibold">12</td>
+                                <td class="p-4 text-center">
+                                    <span class="bg-lime-100 text-lime-800 px-3 py-1 rounded-full font-bold text-sm">VS</span>
+                                </td>
+                                <td class="p-4 text-slate-700 font-medium">Enlace de Recursos Naturales y Vida Silvestre</td>
+                                <td class="p-4 text-slate-600">Manuel Alfredo Sariñana Pérez</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Ejemplos de Determinantes -->
+            <div class="mt-8 bg-gradient-to-r from-blue-50 to-indigo-50 p-6 rounded-xl border-2 border-blue-200">
+                <h3 class="text-xl font-bold text-slate-700 mb-4">
+                    <i class="fas fa-lightbulb text-yellow-500 mr-2"></i> Ejemplos de Determinantes
+                </h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div class="bg-white p-4 rounded-lg shadow">
+                        <p class="text-xs text-slate-500 font-bold mb-2">Unidad Jurídica</p>
+                        <p class="text-lg font-mono font-bold text-emerald-700">OR-130/UJ/0001/2026</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow">
+                        <p class="text-xs text-slate-500 font-bold mb-2">Villa Ocampo</p>
+                        <p class="text-lg font-mono font-bold text-emerald-700">OR-130/VO/0045/2026</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow">
+                        <p class="text-xs text-slate-500 font-bold mb-2">Impacto Ambiental</p>
+                        <p class="text-lg font-mono font-bold text-emerald-700">OR-130/IA/0123/2026</p>
+                    </div>
+                    <div class="bg-white p-4 rounded-lg shadow">
+                        <p class="text-xs text-slate-500 font-bold mb-2">Gestión Ambiental</p>
+                        <p class="text-lg font-mono font-bold text-emerald-700">OR-130/GA/0089/2026</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Nota Importante -->
+            <div class="mt-6 bg-amber-50 border-l-4 border-amber-500 p-4 rounded">
+                <div class="flex items-start gap-3">
+                    <i class="fas fa-exclamation-triangle text-amber-600 text-xl mt-1"></i>
+                    <div>
+                        <h4 class="font-bold text-amber-900 mb-1">Nota Importante</h4>
+                        <p class="text-sm text-amber-800">
+                            El número consecutivo se genera automáticamente por área y año. Cada área mantiene su propia numeración independiente. 
+                            El sistema garantiza que no se repitan números dentro del mismo año y área.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- FIN APARTADO PROCEDIMIENTO INTERNO -->
+
+        <div class="bg-gradient-to-r from-slate-700 to-slate-800 text-white rounded-2xl shadow-xl p-8">
+            <h2 class="text-2xl font-bold mb-4">
+                <i class="fas fa-info-circle mr-2"></i> Información Técnica
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <h3 class="font-bold text-lg mb-3 text-emerald-400">Base de Datos</h3>
+                    <ul class="space-y-2 text-sm text-slate-300">
+                        <li><i class="fas fa-database mr-2"></i> Tabla: registro_oficios</li>
+                        <li><i class="fas fa-list mr-2"></i> Tabla: catalogo_tramites</li>
+                        <li><i class="fas fa-filter mr-2"></i> Filtro por área: area_siglas</li>
+                        <li><i class="fas fa-clock mr-2"></i> Ordenamiento: fecha descendente</li>
+                    </ul>
+                </div>
+                <div>
+                    <h3 class="font-bold text-lg mb-3 text-blue-400">Almacenamiento Local</h3>
+                    <ul class="space-y-2 text-sm text-slate-300">
+                        <li><i class="fas fa-save mr-2"></i> localStorage para cada área</li>
+                        <li><i class="fas fa-file-code mr-2"></i> Formato: JSON estructurado</li>
+                        <li><i class="fas fa-shield-alt mr-2"></i> Respaldos automáticos cada 60s</li>
+                        <li><i class="fas fa-lock mr-2"></i> Protección de registros sincronizados</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <footer class="bg-slate-800 text-white py-6 mt-12">
+        <div class="container mx-auto px-6 text-center">
+            <p class="text-slate-400">
+                <i class="fas fa-code mr-2"></i> Sistema desarrollado para SEMARNAT Durango
+            </p>
+            <p class="text-slate-500 text-sm mt-2">Versión 2.0.0 - Enero 2026</p>
+        </div>
+    </footer>
+
+</body>
+</html>
