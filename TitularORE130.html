@@ -1,0 +1,1056 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Control de Trámites - SEMARNAT Durango 2026</title>
+    
+    <!-- CDN Dependencies -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        :root { 
+            --primary: #13322B; 
+            --accent: #9D2449; 
+        }
+        .bg-gob { 
+            background-color: var(--primary); 
+        }
+        .status-dot { 
+            width: 12px; 
+            height: 12px; 
+            border-radius: 50%; 
+            transition: all 0.3s ease; 
+        }
+        .pulse { 
+            animation: pulse-animation 2s infinite; 
+        }
+        @keyframes pulse-animation { 
+            0% { opacity: 1; } 
+            50% { opacity: 0.4; } 
+            100% { opacity: 1; } 
+        }
+        .gradient-bg {
+            background: linear-gradient(135deg, #13322B 0%, #1a4838 100%);
+        }
+        .card-hover {
+            transition: all 0.3s ease;
+        }
+        .card-hover:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(0,0,0,0.15);
+        }
+        .animate-fade-in {
+            animation: fade-in 0.3s ease-out;
+        }
+        @keyframes fade-in {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 1000;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.6);
+        }
+        .modal-content {
+            background-color: white;
+            margin: 3% auto;
+            padding: 0;
+            border-radius: 1rem;
+            max-width: 900px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+            animation: modal-slide-in 0.3s ease-out;
+        }
+        @keyframes modal-slide-in {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        .badge-estado {
+            padding: 0.25rem 0.75rem;
+            border-radius: 9999px;
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            display: inline-block;
+        }
+        .estado-pendiente { background: #fef3c7; color: #92400e; }
+        .estado-proceso { background: #dbeafe; color: #1e40af; }
+        .estado-atendido { background: #e0e7ff; color: #4338ca; }
+        .estado-concluido { background: #d1fae5; color: #065f46; }
+        .estado-cancelado { background: #fee2e2; color: #991b1b; }
+    </style>
+</head>
+<body class="bg-slate-100 font-sans">
+
+    <!-- Header -->
+    <header class="gradient-bg text-white p-4 shadow-xl border-b-4 border-[#9D2449]">
+        <div class="container mx-auto flex justify-between items-center flex-wrap gap-4">
+            <div class="flex items-center gap-4">
+              -🌲🌲🌲-
+                <div>
+                    <h1 class="text-xl font-bold">Sistema de Control de Trámites</h1>
+                    <p class="text-xs text-emerald-200">SEMARNAT Durango | Oficina de Representación OR-130</p>
+                    
+                    <div id="connection-badge" class="flex items-center gap-2 mt-1 bg-black/20 px-3 py-1 rounded-full w-fit">
+                        <span id="conn-dot" class="status-dot bg-gray-400"></span>
+                        <span id="conn-text" class="text-[9px] font-bold uppercase">Verificando Supabase...</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex gap-2 flex-wrap">
+                <button 
+                    onclick="fetchData()" 
+                    id="btn-refresh" 
+                    class="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded text-xs font-bold shadow-lg transition flex items-center gap-2">
+                    <i id="sync-icon" class="fas fa-sync-alt"></i> 
+                    ACTUALIZAR
+                </button>
+                <button 
+                    onclick="exportarExcel()" 
+                    class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded text-xs font-bold shadow-lg transition flex items-center gap-2">
+                    <i class="fas fa-file-excel"></i> 
+                    EXPORTAR EXCEL
+                </button>
+                <button 
+                    onclick="probarConexion()" 
+                    class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded text-xs font-bold shadow-lg transition flex items-center gap-2">
+                    <i class="fas fa-plug"></i> 
+                    PROBAR CONEXIÓN
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content -->
+    <main class="container mx-auto p-6 space-y-6">
+        
+        <!-- Cards de Estadísticas -->
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-500 font-bold uppercase">Total Registros</p>
+                        <h2 id="stat-total" class="text-3xl font-bold text-emerald-700">0</h2>
+                    </div>
+                    <div class="bg-emerald-100 p-3 rounded-lg">
+                        <i class="fas fa-file-alt text-2xl text-emerald-600"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-500 font-bold uppercase">Áreas Activas</p>
+                        <h2 id="stat-areas" class="text-3xl font-bold text-blue-700">0</h2>
+                    </div>
+                    <div class="bg-blue-100 p-3 rounded-lg">
+                        <i class="fas fa-map-marked-alt text-2xl text-blue-600"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-500 font-bold uppercase">Hoy</p>
+                        <h2 id="stat-hoy" class="text-3xl font-bold text-purple-700">0</h2>
+                    </div>
+                    <div class="bg-purple-100 p-3 rounded-lg">
+                        <i class="fas fa-calendar-day text-2xl text-purple-600"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-500 font-bold uppercase">Pendientes</p>
+                        <h2 id="stat-pendientes" class="text-3xl font-bold text-amber-700">0</h2>
+                    </div>
+                    <div class="bg-amber-100 p-3 rounded-lg">
+                        <i class="fas fa-clock text-2xl text-amber-600"></i>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-500 font-bold uppercase">Concluidos</p>
+                        <h2 id="stat-concluidos" class="text-3xl font-bold text-green-700">0</h2>
+                    </div>
+                    <div class="bg-green-100 p-3 rounded-lg">
+                        <i class="fas fa-check-circle text-2xl text-green-600"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Gráficas -->
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <i class="fas fa-chart-bar text-emerald-600"></i>
+                    Determinantes por Área
+                </h3>
+                <canvas id="chartAreas" height="250"></canvas>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-lg p-6">
+                <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                    <i class="fas fa-chart-pie text-blue-600"></i>
+                    Distribución por Estado
+                </h3>
+                <canvas id="chartEstados" height="250"></canvas>
+            </div>
+        </div>
+
+        <!-- Filtros -->
+        <div class="bg-white rounded-xl shadow-lg p-6">
+            <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
+                <i class="fas fa-filter text-purple-600"></i>
+                Filtros de Búsqueda
+            </h3>
+            
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <input 
+                    type="text" 
+                    id="searchInput" 
+                    placeholder="🔍 Buscar determinante, asunto o bitácora..." 
+                    oninput="filtrarTabla()"
+                    class="px-4 py-2 border-2 border-slate-200 rounded-lg focus:border-emerald-500 focus:outline-none text-sm">
+                
+                <select 
+                    id="filterArea" 
+                    onchange="filtrarTabla()"
+                    class="px-4 py-2 border-2 border-slate-200 rounded-lg focus:border-emerald-500 focus:outline-none text-sm">
+                    <option value="">Todas las áreas</option>
+                </select>
+
+                <select 
+                    id="filterEstado" 
+                    onchange="filtrarTabla()"
+                    class="px-4 py-2 border-2 border-slate-200 rounded-lg focus:border-emerald-500 focus:outline-none text-sm">
+                    <option value="">Todos los estados</option>
+                    <option value="Pendiente">Pendiente</option>
+                    <option value="En Proceso">En Proceso</option>
+                    <option value="Atendido">Atendido</option>
+                    <option value="Concluido">Concluido</option>
+                    <option value="Cancelado">Cancelado</option>
+                </select>
+                
+                <button 
+                    onclick="limpiarFiltros()"
+                    class="bg-slate-600 hover:bg-slate-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition flex items-center justify-center gap-2">
+                    <i class="fas fa-eraser"></i>
+                    Limpiar Filtros
+                </button>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
+                <div class="flex items-center gap-2">
+                    <label class="text-xs font-bold text-slate-600">Desde:</label>
+                    <input 
+                        type="date" 
+                        id="filterFechaDesde" 
+                        onchange="filtrarTabla()"
+                        class="flex-1 px-3 py-2 border-2 border-slate-200 rounded-lg focus:border-emerald-500 focus:outline-none text-sm">
+                </div>
+                
+                <div class="flex items-center gap-2">
+                    <label class="text-xs font-bold text-slate-600">Hasta:</label>
+                    <input 
+                        type="date" 
+                        id="filterFechaHasta" 
+                        onchange="filtrarTabla()"
+                        class="flex-1 px-3 py-2 border-2 border-slate-200 rounded-lg focus:border-emerald-500 focus:outline-none text-sm">
+                </div>
+            </div>
+        </div>
+
+        <!-- Tabla de Registros -->
+        <div class="bg-white rounded-xl shadow-lg overflow-hidden">
+            <div class="bg-gradient-to-r from-slate-700 to-slate-800 text-white p-6">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <h3 class="text-xl font-bold flex items-center gap-2">
+                            <i class="fas fa-table"></i>
+                            Registro General de Determinantes
+                        </h3>
+                        <p class="text-xs text-slate-300 mt-1">
+                            Mostrando <span id="count-registros" class="font-bold text-emerald-300">0</span> registros
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="overflow-x-auto">
+                <table class="w-full">
+                    <thead class="bg-slate-100 border-b-2 border-slate-300">
+                        <tr>
+                            <th class="p-4 text-left text-xs font-bold text-slate-700 uppercase">Fecha</th>
+                            <th class="p-4 text-left text-xs font-bold text-slate-700 uppercase">Determinante</th>
+                            <th class="p-4 text-center text-xs font-bold text-slate-700 uppercase">Área</th>
+                            <th class="p-4 text-center text-xs font-bold text-slate-700 uppercase">Estado</th>
+                            <th class="p-4 text-left text-xs font-bold text-slate-700 uppercase">Bitácora</th>
+                            <th class="p-4 text-left text-xs font-bold text-slate-700 uppercase">Detalles</th>
+                            <th class="p-4 text-center text-xs font-bold text-slate-700 uppercase">Acciones</th>
+                        </tr>
+                    </thead>
+                    <tbody id="table-content">
+                        <tr>
+                            <td colspan="7" class="p-12 text-center text-slate-400">
+                                <i class="fas fa-spinner fa-spin text-4xl mb-3"></i>
+                                <p class="font-bold">Cargando datos...</p>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- Modal Ver Detalle -->
+    <div id="modalDetalle" class="modal">
+        <div class="modal-content">
+            <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 flex items-center justify-between rounded-t-xl">
+                <div class="flex items-center gap-3">
+                    <div class="bg-white bg-opacity-20 p-3 rounded-lg">
+                        <i class="fas fa-file-alt text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold">Detalle del Determinante</h3>
+                </div>
+                <button onclick="cerrarModal('modalDetalle')" class="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div id="contenidoDetalle" class="p-6"></div>
+        </div>
+    </div>
+
+    <!-- Modal Editar -->
+    <div id="modalEditar" class="modal">
+        <div class="modal-content">
+            <div class="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white p-6 flex items-center justify-between rounded-t-xl">
+                <div class="flex items-center gap-3">
+                    <div class="bg-white bg-opacity-20 p-3 rounded-lg">
+                        <i class="fas fa-edit text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold">Editar Determinante</h3>
+                </div>
+                <button onclick="cerrarModal('modalEditar')" class="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div id="contenidoEditar" class="p-6"></div>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // CONFIGURACIÓN SUPABASE
+        // ==========================================
+        const SB_URL = "https://rnwksmgwmnjatrgezaaa.supabase.co";
+        const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJud2tzbWd3bW5qYXRyZ2V6YWFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc5MTY1MTYsImV4cCI6MjA4MzQ5MjUxNn0.vQXfHnWRuCNOjbqX-iYragObPA9GyCw9z9RMsNLjEfE";
+        
+        let _sb = null;
+        let globalData = [];
+        let filteredData = [];
+        let chartAreasInstance = null;
+        let chartEstadosInstance = null;
+        let registroEditando = null;
+
+        // ==========================================
+        // INICIALIZACIÓN
+        // ==========================================
+        window.onload = async function() {
+            console.log("=== INICIANDO SISTEMA DE CONTROL ===");
+            
+            try {
+                _sb = supabase.createClient(SB_URL, SB_KEY);
+                console.log("✓ Cliente Supabase creado");
+                
+                await verificarConexion();
+                await fetchData();
+                
+                console.log("✓ Sistema inicializado correctamente");
+            } catch (err) {
+                console.error("✗ Error en inicialización:", err);
+                mostrarAlerta('error', 'Error al inicializar: ' + err.message);
+            }
+        };
+
+        // ==========================================
+        // CONEXIÓN
+        // ==========================================
+        async function verificarConexion() {
+            const dot = document.getElementById('conn-dot');
+            const text = document.getElementById('conn-text');
+            
+            try {
+                const { data, error } = await _sb.from('registro_oficios').select('id').limit(1);
+                
+                if (error) throw error;
+                
+                dot.className = 'status-dot bg-emerald-500 pulse';
+                text.textContent = 'Conectado a Supabase';
+                text.className = 'text-[9px] font-bold uppercase text-emerald-200';
+                console.log("✓ Conexión exitosa");
+                
+                return true;
+            } catch (err) {
+                dot.className = 'status-dot bg-red-500';
+                text.textContent = 'Sin conexión';
+                text.className = 'text-[9px] font-bold uppercase text-red-200';
+                console.error("✗ Error de conexión:", err);
+                
+                return false;
+            }
+        }
+
+        async function probarConexion() {
+            mostrarAlerta('info', 'Probando conexión...');
+            const conectado = await verificarConexion();
+            
+            if (conectado) {
+                mostrarAlerta('success', 'Conexión exitosa con Supabase');
+            } else {
+                mostrarAlerta('error', 'Error de conexión con Supabase');
+            }
+        }
+
+        // ==========================================
+        // CARGAR DATOS
+        // ==========================================
+        async function fetchData() {
+            const icon = document.getElementById('sync-icon');
+            icon.classList.add('fa-spin');
+            
+            try {
+                console.log("Cargando datos desde Supabase...");
+                
+                const { data, error } = await _sb
+                    .from('registro_oficios')
+                    .select('*')
+                    .order('fecha', { ascending: false });
+                
+                if (error) throw error;
+                
+                globalData = data || [];
+                filteredData = [...globalData];
+                
+                console.log("✓ Datos cargados:", globalData.length, "registros");
+                
+                renderAll();
+                mostrarAlerta('success', `${globalData.length} registros cargados correctamente`);
+                
+            } catch (err) {
+                console.error("✗ Error al cargar datos:", err);
+                mostrarAlerta('error', 'Error al cargar datos: ' + err.message);
+                
+                document.getElementById('table-content').innerHTML = `
+                    <tr>
+                        <td colspan="7" class="p-8 text-center text-red-500">
+                            <i class="fas fa-exclamation-triangle text-4xl mb-2"></i>
+                            <p class="font-bold">Error al cargar datos</p>
+                            <p class="text-sm">${err.message}</p>
+                        </td>
+                    </tr>
+                `;
+            } finally {
+                icon.classList.remove('fa-spin');
+            }
+        }
+
+        // ==========================================
+        // RENDERIZADO GENERAL
+        // ==========================================
+        function renderAll() {
+            renderEstadisticas();
+            renderGraficas();
+            renderTabla();
+            renderFiltros();
+        }
+
+        // ==========================================
+        // ESTADÍSTICAS
+        // ==========================================
+        function renderEstadisticas() {
+            document.getElementById('stat-total').innerText = globalData.length.toLocaleString();
+            
+            const areasUnicas = new Set(globalData.map(r => r.area_siglas));
+            document.getElementById('stat-areas').innerText = `${areasUnicas.size} / 11`;
+            
+            const hoyStr = new Date().toISOString().split('T')[0];
+            const hoyCount = globalData.filter(r => r.fecha && r.fecha.includes(hoyStr)).length;
+            document.getElementById('stat-hoy').innerText = hoyCount;
+            
+            // Nuevas estadísticas por estado
+            const pendientes = globalData.filter(r => !r.estado || r.estado === 'Pendiente').length;
+            const concluidos = globalData.filter(r => r.estado === 'Concluido').length;
+            
+            document.getElementById('stat-pendientes').innerText = pendientes;
+            document.getElementById('stat-concluidos').innerText = concluidos;
+        }
+
+        // ==========================================
+        // GRÁFICAS
+        // ==========================================
+        function renderGraficas() {
+            // Gráfica por Área
+            const counts = {};
+            globalData.forEach(r => {
+                counts[r.area_siglas] = (counts[r.area_siglas] || 0) + 1;
+            });
+            
+            if (chartAreasInstance) chartAreasInstance.destroy();
+            chartAreasInstance = new Chart(document.getElementById('chartAreas'), {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(counts).sort(),
+                    datasets: [{
+                        label: 'Determinantes Registrados',
+                        data: Object.keys(counts).sort().map(k => counts[k]),
+                        backgroundColor: '#10b981',
+                        borderRadius: 5,
+                        borderWidth: 0
+                    }]
+                },
+                options: { 
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => `Determinantes: ${context.parsed.y}`
+                            }
+                        }
+                    },
+                    scales: { 
+                        y: { 
+                            beginAtZero: true,
+                            ticks: { precision: 0 }
+                        } 
+                    }
+                }
+            });
+
+            // Gráfica por Estado
+            const estadoCounts = {
+                'Pendiente': 0,
+                'En Proceso': 0,
+                'Atendido': 0,
+                'Concluido': 0,
+                'Cancelado': 0
+            };
+            
+            globalData.forEach(r => {
+                const estado = r.estado || 'Pendiente';
+                estadoCounts[estado] = (estadoCounts[estado] || 0) + 1;
+            });
+
+            if (chartEstadosInstance) chartEstadosInstance.destroy();
+            chartEstadosInstance = new Chart(document.getElementById('chartEstados'), {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(estadoCounts),
+                    datasets: [{
+                        data: Object.values(estadoCounts),
+                        backgroundColor: [
+                            '#f59e0b', // Pendiente
+                            '#3b82f6', // En Proceso
+                            '#6366f1', // Atendido
+                            '#10b981', // Concluido
+                            '#ef4444'  // Cancelado
+                        ],
+                        borderWidth: 2,
+                        borderColor: '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                padding: 15,
+                                font: { size: 11, weight: 'bold' }
+                            }
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: (context) => {
+                                    const label = context.label || '';
+                                    const value = context.parsed || 0;
+                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                    const percentage = ((value / total) * 100).toFixed(1);
+                                    return `${label}: ${value} (${percentage}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        // ==========================================
+        // TABLA
+        // ==========================================
+        function renderTabla() {
+            const tbody = document.getElementById('table-content');
+            document.getElementById('count-registros').innerText = filteredData.length;
+
+            if (filteredData.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="7" class="p-8 text-center text-slate-400">
+                            <i class="fas fa-inbox text-4xl mb-2"></i>
+                            <p>No hay registros que mostrar</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+
+            tbody.innerHTML = filteredData.map(r => {
+                const estado = r.estado || 'Pendiente';
+                const estadoClass = {
+                    'Pendiente': 'estado-pendiente',
+                    'En Proceso': 'estado-proceso',
+                    'Atendido': 'estado-atendido',
+                    'Concluido': 'estado-concluido',
+                    'Cancelado': 'estado-cancelado'
+                }[estado] || 'estado-pendiente';
+
+                return `
+                    <tr class="hover:bg-emerald-50 transition border-b border-slate-100">
+                        <td class="p-4 text-slate-500 text-xs">
+                            ${new Date(r.fecha).toLocaleDateString('es-MX', {
+                                day: '2-digit',
+                                month: 'short',
+                                year: 'numeric'
+                            })}
+                        </td>
+                        <td class="p-4 font-bold text-emerald-900 font-mono text-sm">
+                            ${r.determinante}
+                        </td>
+                        <td class="p-4 text-center">
+                            <span class="bg-emerald-100 text-emerald-800 px-2 py-1 rounded text-[10px] font-bold">
+                                ${r.area_siglas}
+                            </span>
+                        </td>
+                        <td class="p-4 text-center">
+                            <span class="badge-estado ${estadoClass}">
+                                ${estado}
+                            </span>
+                        </td>
+                        <td class="p-4 font-mono text-xs font-bold text-slate-600">
+                            ${r.bitacora_referencia || 'N/A'}
+                        </td>
+                        <td class="p-4 text-xs text-slate-500 leading-tight">
+                            <span class="text-slate-800 font-bold block mb-1">${r.homoclave || 'N/A'}</span>
+                            ${r.asunto.substring(0, 80)}${r.asunto.length > 80 ? '...' : ''}
+                        </td>
+                        <td class="p-4">
+                            <div class="flex items-center justify-center gap-1">
+                                <button 
+                                    onclick="verDetalle(${r.id})" 
+                                    class="p-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition"
+                                    title="Ver detalle">
+                                    <i class="fas fa-eye text-sm"></i>
+                                </button>
+                                <button 
+                                    onclick="abrirModalEditar(${r.id})" 
+                                    class="p-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-lg transition"
+                                    title="Editar">
+                                    <i class="fas fa-edit text-sm"></i>
+                                </button>
+                                <button 
+                                    onclick="confirmarEliminar(${r.id}, '${r.determinante}')" 
+                                    class="p-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition"
+                                    title="Eliminar">
+                                    <i class="fas fa-trash text-sm"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+        }
+
+        // ==========================================
+        // VER DETALLE
+        // ==========================================
+        function verDetalle(id) {
+            const registro = globalData.find(r => r.id === id);
+            if (!registro) return;
+
+            const fecha = new Date(registro.fecha).toLocaleString('es-MX', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+
+            const estado = registro.estado || 'Pendiente';
+            const estadoClass = {
+                'Pendiente': 'estado-pendiente',
+                'En Proceso': 'estado-proceso',
+                'Atendido': 'estado-atendido',
+                'Concluido': 'estado-concluido',
+                'Cancelado': 'estado-cancelado'
+            }[estado] || 'estado-pendiente';
+
+            const html = `
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="p-4 bg-emerald-50 rounded-lg">
+                            <p class="text-xs text-slate-500 font-bold mb-1">DETERMINANTE</p>
+                            <p class="text-lg font-bold text-emerald-700 font-mono">${registro.determinante}</p>
+                        </div>
+                        <div class="p-4 bg-blue-50 rounded-lg">
+                            <p class="text-xs text-slate-500 font-bold mb-1">ÁREA</p>
+                            <p class="text-lg font-bold text-blue-700">${registro.area_siglas}</p>
+                        </div>
+                    </div>
+
+                    <div class="p-4 bg-slate-50 rounded-lg">
+                        <p class="text-xs text-slate-500 font-bold mb-2">ESTADO ACTUAL</p>
+                        <span class="badge-estado ${estadoClass}">${estado}</span>
+                    </div>
+
+                    <div class="p-4 bg-slate-50 rounded-lg">
+                        <p class="text-xs text-slate-500 font-bold mb-2"><i class="fas fa-folder mr-1"></i> HOMOCLAVE</p>
+                        <p class="text-sm font-bold text-slate-800">${registro.homoclave || 'No especificado'}</p>
+                    </div>
+
+                    <div class="p-4 bg-slate-50 rounded-lg">
+                        <p class="text-xs text-slate-500 font-bold mb-2"><i class="fas fa-hashtag mr-1"></i> BITÁCORA REFERENCIA</p>
+                        <p class="text-sm text-slate-700">${registro.bitacora_referencia || 'No especificado'}</p>
+                    </div>
+
+                    <div class="p-4 bg-slate-50 rounded-lg">
+                        <p class="text-xs text-slate-500 font-bold mb-2"><i class="fas fa-align-left mr-1"></i> ASUNTO</p>
+                        <p class="text-sm text-slate-700 leading-relaxed">${registro.asunto}</p>
+                    </div>
+
+                    <div class="p-4 bg-slate-50 rounded-lg">
+                        <p class="text-xs text-slate-500 font-bold mb-2"><i class="fas fa-calendar-alt mr-1"></i> FECHA DE REGISTRO</p>
+                        <p class="text-sm text-slate-700">${fecha}</p>
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="p-4 bg-slate-50 rounded-lg">
+                            <p class="text-xs text-slate-500 font-bold mb-1">CONSECUTIVO</p>
+                            <p class="text-sm font-bold text-slate-800">${registro.consecutivo}</p>
+                        </div>
+                        <div class="p-4 bg-slate-50 rounded-lg">
+                            <p class="text-xs text-slate-500 font-bold mb-1">AÑO</p>
+                            <p class="text-sm font-bold text-slate-800">${registro.anio}</p>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('contenidoDetalle').innerHTML = html;
+            document.getElementById('modalDetalle').style.display = 'block';
+        }
+
+        // ==========================================
+        // EDITAR
+        // ==========================================
+        function abrirModalEditar(id) {
+            const registro = globalData.find(r => r.id === id);
+            if (!registro) return;
+
+            registroEditando = registro;
+
+            const html = `
+                <form onsubmit="guardarEdicion(event)" class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-2">DETERMINANTE</label>
+                            <input type="text" value="${registro.determinante}" readonly
+                                   class="w-full px-3 py-2 bg-slate-100 border-2 border-slate-200 rounded-lg text-sm font-mono">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-2">ÁREA</label>
+                            <input type="text" value="${registro.area_siglas}" readonly
+                                   class="w-full px-3 py-2 bg-slate-100 border-2 border-slate-200 rounded-lg text-sm">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-2">
+                            <i class="fas fa-traffic-light text-purple-600 mr-1"></i> ESTADO *
+                        </label>
+                        <select id="edit-estado" required
+                                class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg focus:border-emerald-500 focus:outline-none text-sm">
+                            <option value="Pendiente" ${(!registro.estado || registro.estado === 'Pendiente') ? 'selected' : ''}>Pendiente</option>
+                            <option value="En Proceso" ${registro.estado === 'En Proceso' ? 'selected' : ''}>En Proceso</option>
+                            <option value="Atendido" ${registro.estado === 'Atendido' ? 'selected' : ''}>Atendido</option>
+                            <option value="Concluido" ${registro.estado === 'Concluido' ? 'selected' : ''}>Concluido</option>
+                            <option value="Cancelado" ${registro.estado === 'Cancelado' ? 'selected' : ''}>Cancelado</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-2">
+                            <i class="fas fa-folder text-emerald-600 mr-1"></i> HOMOCLAVE
+                        </label>
+                        <input type="text" id="edit-homoclave" value="${registro.homoclave || ''}"
+                               class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg focus:border-emerald-500 focus:outline-none text-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-2">
+                            <i class="fas fa-hashtag text-blue-600 mr-1"></i> BITÁCORA REFERENCIA
+                        </label>
+                        <input type="text" id="edit-bitacora" value="${registro.bitacora_referencia || ''}"
+                               class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg focus:border-emerald-500 focus:outline-none text-sm">
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-2">
+                            <i class="fas fa-align-left text-slate-600 mr-1"></i> ASUNTO *
+                        </label>
+                        <textarea id="edit-asunto" required rows="4"
+                                  class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg focus:border-emerald-500 focus:outline-none text-sm resize-none">${registro.asunto}</textarea>
+                    </div>
+
+                    <div class="flex gap-3 justify-end pt-4 border-t">
+                        <button type="button" onclick="cerrarModal('modalEditar')"
+                                class="px-6 py-2 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg font-bold text-sm transition">
+                            <i class="fas fa-times mr-2"></i>Cancelar
+                        </button>
+                        <button type="submit"
+                                class="px-6 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-sm transition">
+                            <i class="fas fa-save mr-2"></i>Guardar Cambios
+                        </button>
+                    </div>
+                </form>
+            `;
+
+            document.getElementById('contenidoEditar').innerHTML = html;
+            document.getElementById('modalEditar').style.display = 'block';
+        }
+
+        async function guardarEdicion(event) {
+            event.preventDefault();
+
+            if (!registroEditando) return;
+
+            const estado = document.getElementById('edit-estado').value;
+            const homoclave = document.getElementById('edit-homoclave').value.trim();
+            const bitacora = document.getElementById('edit-bitacora').value.trim();
+            const asunto = document.getElementById('edit-asunto').value.trim();
+
+            if (!asunto || asunto.length < 10) {
+                mostrarAlerta('error', 'El asunto debe tener al menos 10 caracteres');
+                return;
+            }
+
+            try {
+                mostrarAlerta('info', 'Guardando cambios...');
+
+                const { data, error } = await _sb
+                    .from('registro_oficios')
+                    .update({
+                        estado: estado,
+                        homoclave: homoclave,
+                        bitacora_referencia: bitacora,
+                        asunto: asunto
+                    })
+                    .eq('id', registroEditando.id);
+
+                if (error) throw error;
+
+                mostrarAlerta('success', 'Registro actualizado correctamente');
+                cerrarModal('modalEditar');
+                await fetchData();
+
+            } catch (err) {
+                console.error('Error al actualizar:', err);
+                mostrarAlerta('error', 'Error al actualizar: ' + err.message);
+            }
+        }
+
+        // ==========================================
+        // ELIMINAR
+        // ==========================================
+        function confirmarEliminar(id, determinante) {
+            if (confirm(`¿Está seguro de eliminar el determinante ${determinante}?\n\nEsta acción no se puede deshacer.`)) {
+                eliminarRegistro(id);
+            }
+        }
+
+        async function eliminarRegistro(id) {
+            try {
+                mostrarAlerta('info', 'Eliminando registro...');
+
+                const { data, error } = await _sb
+                    .from('registro_oficios')
+                    .delete()
+                    .eq('id', id);
+
+                if (error) throw error;
+
+                mostrarAlerta('success', 'Registro eliminado correctamente');
+                await fetchData();
+
+            } catch (err) {
+                console.error('Error al eliminar:', err);
+                mostrarAlerta('error', 'Error al eliminar: ' + err.message);
+            }
+        }
+
+        // ==========================================
+        // FILTROS
+        // ==========================================
+        function renderFiltros() {
+            const areas = [...new Set(globalData.map(r => r.area_siglas))].sort();
+            const select = document.getElementById('filterArea');
+            select.innerHTML = '<option value="">Todas las áreas</option>' + 
+                areas.map(a => `<option value="${a}">${a}</option>`).join('');
+        }
+
+        function filtrarTabla() {
+            const searchText = document.getElementById('searchInput').value.toLowerCase();
+            const filterArea = document.getElementById('filterArea').value;
+            const filterEstado = document.getElementById('filterEstado').value;
+            const fechaDesde = document.getElementById('filterFechaDesde').value;
+            const fechaHasta = document.getElementById('filterFechaHasta').value;
+
+            filteredData = globalData.filter(r => {
+                const matchText = searchText === '' || 
+                    r.determinante.toLowerCase().includes(searchText) ||
+                    r.asunto.toLowerCase().includes(searchText) ||
+                    (r.bitacora_referencia && r.bitacora_referencia.toLowerCase().includes(searchText));
+
+                const matchArea = filterArea === '' || r.area_siglas === filterArea;
+
+                const estado = r.estado || 'Pendiente';
+                const matchEstado = filterEstado === '' || estado === filterEstado;
+
+                const fechaRegistro = new Date(r.fecha).toISOString().split('T')[0];
+                const matchFechaDesde = !fechaDesde || fechaRegistro >= fechaDesde;
+                const matchFechaHasta = !fechaHasta || fechaRegistro <= fechaHasta;
+
+                return matchText && matchArea && matchEstado && matchFechaDesde && matchFechaHasta;
+            });
+
+            renderTabla();
+        }
+
+        function limpiarFiltros() {
+            document.getElementById('searchInput').value = '';
+            document.getElementById('filterArea').value = '';
+            document.getElementById('filterEstado').value = '';
+            document.getElementById('filterFechaDesde').value = '';
+            document.getElementById('filterFechaHasta').value = '';
+            filteredData = [...globalData];
+            renderTabla();
+            mostrarAlerta('info', 'Filtros limpiados');
+        }
+
+        // ==========================================
+        // EXPORTAR A EXCEL
+        // ==========================================
+        function exportarExcel() {
+            if (globalData.length === 0) {
+                mostrarAlerta('warning', 'No hay datos para exportar');
+                return;
+            }
+
+            const dataParaExcel = globalData.map(r => ({
+                'Determinante': r.determinante,
+                'Consecutivo': r.consecutivo,
+                'Año': r.anio,
+                'Área': r.area_siglas,
+                'Estado': r.estado || 'Pendiente',
+                'Homoclave': r.homoclave || '',
+                'Bitácora': r.bitacora_referencia || '',
+                'Asunto': r.asunto,
+                'Fecha': new Date(r.fecha).toLocaleDateString('es-MX')
+            }));
+
+            const ws = XLSX.utils.json_to_sheet(dataParaExcel);
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Determinantes');
+            
+            const fecha = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `Determinantes_OR130_${fecha}.xlsx`);
+            
+            mostrarAlerta('success', 'Excel exportado correctamente');
+        }
+
+        // ==========================================
+        // UTILIDADES
+        // ==========================================
+        function cerrarModal(id) {
+            document.getElementById(id).style.display = 'none';
+            registroEditando = null;
+        }
+
+        function mostrarAlerta(tipo, mensaje) {
+            const colores = {
+                success: 'bg-emerald-500',
+                error: 'bg-red-500',
+                warning: 'bg-amber-500',
+                info: 'bg-blue-500'
+            };
+            const iconos = {
+                success: 'fa-check-circle',
+                error: 'fa-exclamation-circle',
+                warning: 'fa-exclamation-triangle',
+                info: 'fa-info-circle'
+            };
+            
+            const alerta = document.createElement('div');
+            alerta.className = `fixed top-4 right-4 ${colores[tipo]} text-white px-6 py-4 rounded-lg shadow-2xl z-50 flex items-start gap-3 animate-fade-in max-w-md`;
+            alerta.innerHTML = `
+                <i class="fas ${iconos[tipo]} text-xl mt-0.5"></i>
+                <div class="flex-1">
+                    <div class="font-bold mb-1">${tipo.toUpperCase()}</div>
+                    <div class="text-sm">${mensaje}</div>
+                </div>
+                <button onclick="this.parentElement.remove()" class="text-white text-xl hover:bg-white hover:bg-opacity-20 p-1 rounded">×</button>
+            `;
+            
+            document.body.appendChild(alerta);
+            
+            setTimeout(() => {
+                alerta.style.opacity = '0';
+                alerta.style.transition = 'opacity 0.3s';
+                setTimeout(() => alerta.remove(), 300);
+            }, 5000);
+        }
+
+        // Cerrar modal al hacer clic fuera
+        window.onclick = function(event) {
+            if (event.target.classList.contains('modal')) {
+                event.target.style.display = 'none';
+                registroEditando = null;
+            }
+        }
+    </script>
+</body>
+</html>

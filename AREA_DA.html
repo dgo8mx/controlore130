@@ -1,0 +1,1099 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control Departamento de Administración - SEMARNAT Durango</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        :root {
+            --gob-green: #13322B;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --danger: #ef4444;
+        }
+        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
+        .bg-institucional { background: linear-gradient(135deg, var(--gob-green) 0%, #1a4838 100%); }
+        .status-dot {
+            width: 12px; height: 12px; border-radius: 50%; display: inline-block;
+            box-shadow: 0 0 0 3px rgba(255,255,255,0.2);
+        }
+        @keyframes fade-in { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes pulse-dot { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+        .animate-fade-in { animation: fade-in 0.3s ease-out; }
+        .animate-pulse-dot { animation: pulse-dot 2s ease-in-out infinite; }
+        .card-shadow {
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+        }
+        .card-shadow:hover {
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+            transform: translateY(-2px);
+        }
+        .btn-action { transition: all 0.2s ease; }
+        .btn-action:hover { transform: scale(1.1); }
+        .badge {
+            padding: 0.25rem 0.75rem; border-radius: 9999px;
+            font-size: 0.75rem; font-weight: 600;
+            display: inline-flex; align-items: center; gap: 0.25rem;
+        }
+        .modal {
+            display: none; position: fixed; z-index: 50;
+            left: 0; top: 0; width: 100%; height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+        }
+        .modal-content {
+            background-color: white; margin: 5% auto; padding: 0;
+            border-radius: 1rem; max-width: 800px; max-height: 85vh;
+            overflow-y: auto; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+        }
+        .stat-card {
+            background: linear-gradient(135deg, #ffffff 0%, #f8fafc 100%);
+            border-left: 4px solid var(--success);
+            padding: 1.5rem; border-radius: 0.75rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .input-modern {
+            transition: all 0.2s ease;
+            border: 2px solid #e2e8f0;
+        }
+        .input-modern:focus {
+            border-color: var(--success);
+            box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.1);
+            outline: none;
+        }
+        .table-row-hover:hover {
+            background-color: #f0fdf4;
+            transition: all 0.2s ease;
+        }
+        .row-synced {
+            background-color: #dbeafe !important;
+            border-left: 3px solid #3b82f6;
+        }
+        .row-local {
+            background-color: #fef3c7 !important;
+            border-left: 3px solid #f59e0b;
+        }
+        @media print {
+            .no-print { display: none !important; }
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 9999;
+        }
+        .spinner {
+            border: 4px solid rgba(255, 255, 255, 0.3);
+            border-radius: 50%;
+            border-top: 4px solid white;
+            width: 50px;
+            height: 50px;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="bg-slate-50">
+
+    <header class="bg-institucional text-white p-4 shadow-2xl border-b-4 border-[#9D2449] no-print">
+        <div class="container mx-auto">
+            <div class="flex justify-between items-center flex-wrap gap-4">
+                <div class="flex items-center gap-4">
+                    -🌲-
+                    <div>
+                        <h1 class="text-xl font-bold tracking-tight">Departamento de Administración</h1>
+                        <p class="text-xs text-emerald-200">Control de Determinantes 2026</p>
+                        <div class="flex items-center gap-2 mt-1">
+                            <span id="dot" class="status-dot bg-gray-400"></span>
+                            <span id="status-text" class="text-[10px] uppercase font-bold">Verificando...</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="flex gap-2 flex-wrap">
+                    <button onclick="cargarDatosDesdeNube()" 
+                            class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg text-xs font-bold shadow-lg transition">
+                        <i class="fas fa-cloud-download-alt"></i> CARGAR
+                    </button>
+                    <button onclick="sincronizarConNube()" 
+                            class="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-lg text-xs font-bold shadow-lg transition">
+                        <i class="fas fa-cloud-upload-alt"></i> SINCRONIZAR
+                    </button>
+                    <button onclick="exportarCSV()" 
+                            class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-xs font-bold shadow-lg transition">
+                        <i class="fas fa-file-csv"></i> EXPORTAR
+                    </button>
+                    <button onclick="probarConexion()" 
+                            class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg text-xs font-bold shadow-lg transition">
+                        <i class="fas fa-plug"></i> PROBAR
+                    </button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <section class="container mx-auto px-6 py-4 no-print">
+        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+            <div class="stat-card">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-500 font-semibold uppercase">Total Registros</p>
+                        <h3 id="stat-total" class="text-2xl font-bold text-slate-800">0</h3>
+                    </div>
+                    <div class="bg-emerald-100 p-3 rounded-lg">
+                        <i class="fas fa-file-alt text-xl text-emerald-600"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card" style="border-left-color: #3b82f6;">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-500 font-semibold uppercase">Sincronizados</p>
+                        <h3 id="stat-sincronizados" class="text-2xl font-bold text-slate-800">0</h3>
+                    </div>
+                    <div class="bg-blue-100 p-3 rounded-lg">
+                        <i class="fas fa-cloud-check text-xl text-blue-600"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card" style="border-left-color: #f59e0b;">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-500 font-semibold uppercase">Pendientes</p>
+                        <h3 id="stat-pendientes" class="text-2xl font-bold text-slate-800">0</h3>
+                    </div>
+                    <div class="bg-amber-100 p-3 rounded-lg">
+                        <i class="fas fa-clock text-xl text-amber-600"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card" style="border-left-color: #8b5cf6;">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-500 font-semibold uppercase">Esta Semana</p>
+                        <h3 id="stat-semana" class="text-2xl font-bold text-slate-800">0</h3>
+                    </div>
+                    <div class="bg-purple-100 p-3 rounded-lg">
+                        <i class="fas fa-calendar-week text-xl text-purple-600"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card" style="border-left-color: #06b6d4;">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-500 font-semibold uppercase">Trámites</p>
+                        <h3 id="stat-tramites" class="text-2xl font-bold text-slate-800">0</h3>
+                    </div>
+                    <div class="bg-cyan-100 p-3 rounded-lg">
+                        <i class="fas fa-list text-xl text-cyan-600"></i>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <main class="container mx-auto px-6 py-4 grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 space-y-6">
+            <div class="bg-white rounded-2xl shadow-lg overflow-hidden card-shadow">
+                <div class="bg-gradient-to-r from-emerald-600 to-emerald-700 text-white p-6">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-white bg-opacity-20 p-3 rounded-lg">
+                            <i class="fas fa-file-signature text-2xl"></i>
+                        </div>
+                        <div>
+                            <h2 class="text-xl font-bold">Registrar Nuevo Determinante</h2>
+                            <p class="text-xs text-emerald-100 mt-1">Complete los campos requeridos</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="p-6 space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">
+                                <i class="fas fa-folder text-emerald-600 mr-1"></i> Trámite
+                            </label>
+                            <select id="sel-tramite" class="input-modern w-full p-3 rounded-lg text-sm font-medium">
+                                <option value="">-- Seleccione --</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">
+                                <i class="fas fa-hashtag text-emerald-600 mr-1"></i> Bitácora Referencia
+                            </label>
+                            <input type="text" id="txt-bitacora" placeholder="Ej: 2026-001-VO" 
+                                   class="input-modern w-full p-3 rounded-lg text-sm">
+                        </div>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">
+                            <i class="fas fa-align-left text-emerald-600 mr-1"></i> Asunto del Determinante *
+                        </label>
+                        <textarea id="txt-asunto" rows="3" maxlength="500" placeholder="Describa el asunto del determinante (mínimo 10 caracteres)" 
+                                  class="input-modern w-full p-3 rounded-lg text-sm resize-none"></textarea>
+                        <div class="flex justify-end mt-1">
+                            <span id="char-count" class="text-[10px] text-slate-500 font-bold">0/500</span>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-end gap-2 pt-2">
+                        <button onclick="limpiarFormulario()" 
+                                class="px-6 py-3 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-lg font-bold text-sm transition">
+                            <i class="fas fa-eraser mr-2"></i> Limpiar
+                        </button>
+                        <button onclick="registrarLocal()" 
+                                class="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold text-sm shadow-lg transition">
+                            <i class="fas fa-save mr-2"></i> Guardar Registro
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-lg overflow-hidden card-shadow">
+                <div class="bg-gradient-to-r from-slate-700 to-slate-800 text-white p-6">
+                    <div class="flex items-center justify-between flex-wrap gap-4">
+                        <div class="flex items-center gap-3">
+                            <div class="bg-white bg-opacity-20 p-3 rounded-lg">
+                                <i class="fas fa-table text-2xl"></i>
+                            </div>
+                            <div>
+                                <h2 class="text-xl font-bold">Historial de Determinantes</h2>
+                                <p class="text-xs text-slate-300 mt-1">Registros capturados del área</p>
+                            </div>
+                        </div>
+                        <div class="flex gap-2">
+                            <button onclick="imprimirTabla()" 
+                                    class="px-4 py-2 bg-white bg-opacity-20 hover:bg-opacity-30 rounded-lg text-xs font-bold transition">
+                                <i class="fas fa-print"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="p-6">
+                    <div class="mb-4">
+                        <input type="text" id="search-input" placeholder="🔍 Buscar en registros..." 
+                               onkeyup="buscarEnTabla()"
+                               class="input-modern w-full p-3 rounded-lg text-sm">
+                    </div>
+                    
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-sm">
+                            <thead>
+                                <tr class="bg-slate-100 border-b-2 border-slate-300">
+                                    <th class="p-4 text-left font-bold text-slate-700 uppercase text-xs">
+                                        Determinante / Detalles
+                                    </th>
+                                    <th class="p-4 text-center font-bold text-slate-700 uppercase text-xs">
+                                        Estado
+                                    </th>
+                                    <th class="p-4 text-center font-bold text-slate-700 uppercase text-xs">
+                                        Acciones
+                                    </th>
+                                </tr>
+                            </thead>
+                            <tbody id="table-body">
+                                <tr>
+                                    <td colspan="3" class="p-12 text-center text-slate-400">
+                                        <i class="fas fa-inbox text-5xl mb-3 opacity-50"></i>
+                                        <p class="font-semibold">No hay registros</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="space-y-6">
+            <div class="bg-white rounded-2xl shadow-lg overflow-hidden card-shadow">
+                <div class="bg-gradient-to-r from-purple-600 to-purple-700 text-white p-6">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-white bg-opacity-20 p-3 rounded-lg">
+                            <i class="fas fa-list text-2xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold">Catálogo de Trámites</h3>
+                            <p class="text-xs text-purple-200 mt-1">Gestión de homoclaves</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-2">
+                            <i class="fas fa-tag mr-1"></i> Homoclave
+                        </label>
+                        <input type="text" id="new-hc" placeholder="Ej: SEMARNAT-01-001" 
+                               class="input-modern w-full p-2 rounded-lg text-sm">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-xs font-bold text-slate-700 mb-2">
+                            <i class="fas fa-file-text mr-1"></i> Nombre del Trámite
+                        </label>
+                        <input type="text" id="new-name" placeholder="Nombre completo" 
+                               class="input-modern w-full p-2 rounded-lg text-sm">
+                    </div>
+                    
+                    <button onclick="agregarCatalogo()" 
+                            class="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg font-bold text-sm shadow-lg transition">
+                        <i class="fas fa-plus mr-2"></i> Agregar al Catálogo
+                    </button>
+                    
+                    <div class="border-t pt-4">
+                        <h4 class="text-xs font-bold text-slate-600 mb-3 uppercase tracking-wide">
+                            Trámites Registrados
+                        </h4>
+                        <div id="catalogo-list" class="space-y-2 max-h-96 overflow-y-auto">
+                            <p class="text-xs text-slate-500 italic text-center py-2">Sin trámites</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="bg-white rounded-2xl shadow-lg overflow-hidden card-shadow">
+                <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6">
+                    <div class="flex items-center gap-3">
+                        <div class="bg-white bg-opacity-20 p-3 rounded-lg">
+                            <i class="fas fa-info-circle text-2xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="text-lg font-bold">Información del Sistema</h3>
+                            <p class="text-xs text-blue-200 mt-1">Estado y configuración</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="p-6 space-y-3 text-xs">
+                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                        <span class="font-semibold text-slate-600">
+                            <i class="fas fa-map-marker-alt text-emerald-600 mr-2"></i>Área
+                        </span>
+                        <span class="font-bold text-slate-800">VO - Delegación Administrativa</span>
+                    </div>
+                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                        <span class="font-semibold text-slate-600">
+                            <i class="fas fa-calendar-alt text-emerald-600 mr-2"></i>Última Actualización
+                        </span>
+                        <span id="last-update" class="font-mono text-slate-700">--</span>
+                    </div>
+                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                        <span class="font-semibold text-slate-600">
+                            <i class="fas fa-server text-emerald-600 mr-2"></i>Respaldo Local
+                        </span>
+                        <span class="badge bg-emerald-100 text-emerald-800">
+                            <i class="fas fa-check-circle"></i> Activo
+                        </span>
+                    </div>
+                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                        <span class="font-semibold text-slate-600">
+                            <i class="fas fa-shield-alt text-emerald-600 mr-2"></i>Versión
+                        </span>
+                        <span class="font-mono text-slate-700">2.0.0</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <div id="modal-view" class="modal">
+        <div class="modal-content">
+            <div class="bg-gradient-to-r from-blue-600 to-blue-700 text-white p-6 flex items-center justify-between">
+                <div class="flex items-center gap-3">
+                    <div class="bg-white bg-opacity-20 p-3 rounded-lg">
+                        <i class="fas fa-file-invoice text-2xl"></i>
+                    </div>
+                    <h3 class="text-xl font-bold">Detalle del Determinante</h3>
+                </div>
+                <button onclick="cerrarModal('modal-view')" 
+                        class="text-white hover:bg-white hover:bg-opacity-20 p-2 rounded-lg transition">
+                    <i class="fas fa-times text-xl"></i>
+                </button>
+            </div>
+            <div id="modal-view-content" class="p-6"></div>
+        </div>
+    </div>
+
+    <script>
+        const AREA_SIGLAS = "DA";
+        const AREA_NOMBRE = "Departamento de Administraci��n";
+        const SB_URL = "https://rnwksmgwmnjatrgezaaa.supabase.co";
+        const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJud2tzbWd3bW5qYXRyZ2V6YWFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc5MTY1MTYsImV4cCI6MjA4MzQ5MjUxNn0.vQXfHnWRuCNOjbqX-iYragObPA9GyCw9z9RMsNLjEfE";
+        
+        let _sb = null;
+        let conectado = false;
+        let registroEditando = null;
+        
+        window.onload = async function() {
+            console.log("=== INICIALIZANDO ÁREA: " + AREA_SIGLAS + " ===");
+            try {
+                _sb = supabase.createClient(SB_URL, SB_KEY);
+                console.log("�?Cliente Supabase creado");
+            } catch(e) {
+                console.error("�?Error al crear cliente:", e);
+            }
+            
+            inicializarCatalogo();
+            inicializarRegistros();
+            configurarContador();
+            renderizarTodo();
+            await verificarConexion();
+            await cargarDatosDesdeNube();
+            actualizarFecha();
+            
+            setInterval(guardarRespaldoAutomatico, 60000);
+            console.log("�?Sistema inicializado");
+        };
+        
+        function configurarContador() {
+            const textarea = document.getElementById('txt-asunto');
+            const counter = document.getElementById('char-count');
+            textarea.addEventListener('input', function() {
+                const len = this.value.length;
+                counter.textContent = len + '/500';
+                if (len > 500) {
+                    counter.className = 'text-[10px] text-red-600 font-bold';
+                } else if (len > 450) {
+                    counter.className = 'text-[10px] text-amber-600 font-bold';
+                } else {
+                    counter.className = 'text-[10px] text-slate-500 font-bold';
+                }
+            });
+        }
+        
+        async function probarConexion() {
+            const dot = document.getElementById('dot');
+            const text = document.getElementById('status-text');
+            dot.className = "status-dot bg-blue-500";
+            text.textContent = "Probando...";
+            mostrarAlerta('info', 'Probando conexión...');
+            
+            try {
+                const result = await _sb.from('registro_oficios').select('id').limit(1);
+                if (result.error) throw result.error;
+                conectado = true;
+                dot.className = "status-dot bg-emerald-500 animate-pulse-dot";
+                text.textContent = "Conectado";
+                mostrarAlerta('success', 'Conexión exitosa con la base de datos');
+                console.log("�?Conexión exitosa");
+            } catch (e) {
+                conectado = false;
+                dot.className = "status-dot bg-red-500";
+                text.textContent = "Sin conexión";
+                mostrarAlerta('error', 'Error de conexión: ' + e.message);
+                console.error("�?Error de conexión:", e);
+            }
+        }
+        
+        async function verificarConexion() {
+            const dot = document.getElementById('dot');
+            const text = document.getElementById('status-text');
+            try {
+                const result = await _sb.from('registro_oficios').select('id').limit(1);
+                if (!result.error) {
+                    conectado = true;
+                    dot.className = "status-dot bg-emerald-500 animate-pulse-dot";
+                    text.textContent = "Conectado";
+                } else {
+                    conectado = false;
+                    dot.className = "status-dot bg-amber-500";
+                    text.textContent = "Modo Local";
+                }
+            } catch (e) {
+                conectado = false;
+                dot.className = "status-dot bg-red-500";
+                text.textContent = "Sin Conexión";
+            }
+        }
+        
+        function inicializarCatalogo() {
+            if (!localStorage.getItem('cat_' + AREA_SIGLAS)) {
+                localStorage.setItem('cat_' + AREA_SIGLAS, JSON.stringify([]));
+            }
+        }
+        
+        function inicializarRegistros() {
+            if (!localStorage.getItem('reg_' + AREA_SIGLAS)) {
+                localStorage.setItem('reg_' + AREA_SIGLAS, JSON.stringify([]));
+            }
+        }
+        
+        function obtenerCatalogo() {
+            return JSON.parse(localStorage.getItem('cat_' + AREA_SIGLAS) || "[]");
+        }
+        
+        function guardarCatalogo(cat) {
+            localStorage.setItem('cat_' + AREA_SIGLAS, JSON.stringify(cat));
+        }
+        
+        function agregarCatalogo() {
+            const h = document.getElementById('new-hc').value.trim();
+            const n = document.getElementById('new-name').value.trim();
+            if (!h || !n) {
+                mostrarAlerta('error', 'Complete ambos campos');
+                return;
+            }
+            let cat = obtenerCatalogo();
+            if (cat.some(function(c) { return c.h === h; })) {
+                mostrarAlerta('error', 'La homoclave ya existe');
+                return;
+            }
+            cat.push({h: h, n: n});
+            guardarCatalogo(cat);
+            document.getElementById('new-hc').value = '';
+            document.getElementById('new-name').value = '';
+            renderizarTodo();
+            mostrarAlerta('success', 'Trámite agregado al catálogo');
+        }
+        
+        function eliminarDelCatalogo(homoclave) {
+            if (!confirm('¿Eliminar este trámite del catálogo?')) return;
+            let cat = obtenerCatalogo();
+            cat = cat.filter(function(c) { return c.h !== homoclave; });
+            guardarCatalogo(cat);
+            renderizarTodo();
+            mostrarAlerta('success', 'Trámite eliminado del catálogo');
+        }
+        
+        function obtenerRegistros() {
+            return JSON.parse(localStorage.getItem('reg_' + AREA_SIGLAS) || "[]");
+        }
+        
+        function guardarRegistros(regs) {
+            localStorage.setItem('reg_' + AREA_SIGLAS, JSON.stringify(regs));
+            actualizarFecha();
+        }
+        
+        function registrarLocal() {
+            const asunto = document.getElementById('txt-asunto').value.trim();
+            const bitacora = document.getElementById('txt-bitacora').value.trim();
+            const tramite = document.getElementById('sel-tramite').value;
+            
+            if (!asunto || asunto.length < 10) {
+                mostrarAlerta('error', 'El asunto debe tener mínimo 10 caracteres');
+                return;
+            }
+            if (asunto.length > 500) {
+                mostrarAlerta('error', 'El asunto debe tener máximo 500 caracteres');
+                return;
+            }
+            
+            let regs = obtenerRegistros();
+            const anio = new Date().getFullYear();
+            const regsDelAnio = regs.filter(function(r) { return r.anio === anio; });
+            const consecutivo = regsDelAnio.length + 1;
+            const determinante = 'OR-130/' + AREA_SIGLAS + '-' + String(consecutivo).padStart(4, '0') + '/' + anio;
+            
+            const nuevoRegistro = {
+                determinante: determinante,
+                consecutivo: consecutivo,
+                anio: anio,
+                area_siglas: AREA_SIGLAS,
+                homoclave: tramite,
+                bitacora_referencia: bitacora,
+                asunto: asunto,
+                fecha: new Date().toISOString(),
+                sincronizado: false,
+                bloqueado: false
+            };
+            
+            regs.push(nuevoRegistro);
+            guardarRegistros(regs);
+            limpiarFormulario();
+            renderizarTodo();
+            mostrarAlerta('success', 'Determinante generado: ' + determinante);
+        }
+        
+        function limpiarFormulario() {
+            document.getElementById('txt-asunto').value = '';
+            document.getElementById('txt-bitacora').value = '';
+            document.getElementById('sel-tramite').value = '';
+            document.getElementById('char-count').textContent = '0/500';
+        }
+        
+        async function sincronizarConNube() {
+            if (!conectado) {
+                mostrarAlerta('error', 'No hay conexión con la base de datos');
+                return;
+            }
+            
+            let regs = obtenerRegistros();
+            const pend = regs.filter(function(r) { return !r.sincronizado; });
+            
+            if (pend.length === 0) {
+                mostrarAlerta('info', 'No hay registros pendientes de sincronizar');
+                return;
+            }
+            
+            mostrarCargando(true);
+            mostrarAlerta('info', 'Sincronizando ' + pend.length + ' registros...');
+            
+            try {
+                const datos = pend.map(function(r) {
+                    return {
+                        determinante: r.determinante,
+                        consecutivo: r.consecutivo,
+                        anio: r.anio,
+                        area_siglas: r.area_siglas,
+                        homoclave: r.homoclave,
+                        bitacora_referencia: r.bitacora_referencia,
+                        asunto: r.asunto,
+                        fecha: r.fecha
+                    };
+                });
+                
+                const result = await _sb.from('registro_oficios').insert(datos);
+                if (result.error) throw result.error;
+                
+                regs = regs.map(function(r) {
+                    if (!r.sincronizado) {
+                        return Object.assign({}, r, {sincronizado: true, bloqueado: true});
+                    }
+                    return r;
+                });
+                
+                guardarRegistros(regs);
+                
+                await sincronizarCatalogoConNube();
+                
+                renderizarTodo();
+                mostrarAlerta('success', pend.length + ' registros sincronizados correctamente');
+                console.log("�?Sincronización exitosa");
+            } catch (e) {
+                console.error("�?Error de sincronización:", e);
+                mostrarAlerta('error', 'Error al sincronizar: ' + e.message);
+            } finally {
+                mostrarCargando(false);
+            }
+        }
+        
+        async function sincronizarCatalogoConNube() {
+            if (!conectado) return;
+            
+            const cat = obtenerCatalogo();
+            if (cat.length === 0) return;
+            
+            try {
+                for (let item of cat) {
+                    const { data: existe } = await _sb
+                        .from('catalogo_tramites')
+                        .select('homoclave')
+                        .eq('area_siglas', AREA_SIGLAS)
+                        .eq('homoclave', item.h)
+                        .single();
+                    
+                    if (!existe) {
+                        await _sb.from('catalogo_tramites').insert({
+                            area_siglas: AREA_SIGLAS,
+                            homoclave: item.h,
+                            nombre_tramite: item.n
+                        });
+                    }
+                }
+                console.log("�?Catálogo sincronizado");
+            } catch (error) {
+                console.error("�?Error al sincronizar catálogo:", error);
+            }
+        }
+        
+        async function cargarDatosDesdeNube() {
+            if (!conectado) {
+                console.log("�?Sin conexión, usando datos locales");
+                return;
+            }
+            
+            mostrarCargando(true);
+            
+            try {
+                await cargarRegistrosDesdeNube();
+                await cargarCatalogoDesdeNube();
+                renderizarTodo();
+                mostrarAlerta('success', 'Datos actualizados desde la nube');
+                console.log("�?Datos cargados desde la nube");
+            } catch (error) {
+                console.error("�?Error al cargar datos:", error);
+                mostrarAlerta('warning', 'Error al cargar datos: ' + error.message);
+            } finally {
+                mostrarCargando(false);
+            }
+        }
+        
+        async function cargarRegistrosDesdeNube() {
+            try {
+                const { data, error } = await _sb
+                    .from('registro_oficios')
+                    .select('*')
+                    .eq('area_siglas', AREA_SIGLAS)
+                    .order('fecha', { ascending: false });
+                
+                if (error) throw error;
+                
+                const locales = obtenerRegistros().filter(function(r) { return !r.sincronizado; });
+                
+                const nube = (data || []).map(function(reg) {
+                    return Object.assign({}, reg, {
+                        sincronizado: true,
+                        bloqueado: true
+                    });
+                });
+                
+                const combinados = nube.concat(locales);
+                guardarRegistros(combinados);
+                
+                console.log("�?Registros cargados:", combinados.length);
+                return combinados.length;
+            } catch (error) {
+                throw error;
+            }
+        }
+        
+        async function cargarCatalogoDesdeNube() {
+            try {
+                const { data, error } = await _sb
+                    .from('catalogo_tramites')
+                    .select('*')
+                    .eq('area_siglas', AREA_SIGLAS)
+                    .order('homoclave', { ascending: true });
+                
+                if (error) throw error;
+                
+                if (data && data.length > 0) {
+                    const catalogo = data.map(function(item) {
+                        return {
+                            h: item.homoclave,
+                            n: item.nombre_tramite
+                        };
+                    });
+                    guardarCatalogo(catalogo);
+                    console.log("�?Catálogo cargado:", catalogo.length, "trámites");
+                }
+                
+                return data ? data.length : 0;
+            } catch (error) {
+                console.error("�?Error al cargar catálogo:", error);
+                throw error;
+            }
+        }
+        
+        function eliminar(idx) {
+            let regs = obtenerRegistros();
+            const reg = regs[idx];
+            
+            if (reg.sincronizado || reg.bloqueado) {
+                mostrarAlerta('error', 'No se puede eliminar un registro sincronizado');
+                return;
+            }
+            
+            if (!confirm('¿Eliminar el registro ' + reg.determinante + '?')) return;
+            
+            regs.splice(idx, 1);
+            guardarRegistros(regs);
+            renderizarTodo();
+            mostrarAlerta('success', 'Registro eliminado');
+        }
+        
+        function verDetalle(idx) {
+            const regs = obtenerRegistros();
+            const reg = regs[idx];
+            const fecha = new Date(reg.fecha).toLocaleString('es-MX', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            
+            const estado = reg.sincronizado ? 
+                '<span class="badge bg-blue-100 text-blue-800"><i class="fas fa-cloud-check"></i> Sincronizado</span>' :
+                '<span class="badge bg-amber-100 text-amber-800"><i class="fas fa-clock"></i> Pendiente</span>';
+            
+            const html = '<div class="space-y-4">' +
+                '<div class="grid grid-cols-2 gap-4">' +
+                '<div class="p-4 bg-emerald-50 rounded-lg">' +
+                '<p class="text-xs text-slate-500 font-bold mb-1">DETERMINANTE</p>' +
+                '<p class="text-lg font-bold text-emerald-700 font-mono">' + reg.determinante + '</p>' +
+                '</div>' +
+                '<div class="p-4 bg-blue-50 rounded-lg">' +
+                '<p class="text-xs text-slate-500 font-bold mb-1">ESTADO</p>' +
+                '<div class="mt-2">' + estado + '</div>' +
+                '</div>' +
+                '</div>' +
+                '<div class="p-4 bg-slate-50 rounded-lg">' +
+                '<p class="text-xs text-slate-500 font-bold mb-2"><i class="fas fa-folder mr-1"></i> HOMOCLAVE</p>' +
+                '<p class="text-sm font-bold text-slate-800">' + (reg.homoclave || 'No especificado') + '</p>' +
+                '</div>' +
+                '<div class="p-4 bg-slate-50 rounded-lg">' +
+                '<p class="text-xs text-slate-500 font-bold mb-2"><i class="fas fa-hashtag mr-1"></i> BITÁCORA REFERENCIA</p>' +
+                '<p class="text-sm text-slate-700">' + (reg.bitacora_referencia || 'No especificado') + '</p>' +
+                '</div>' +
+                '<div class="p-4 bg-slate-50 rounded-lg">' +
+                '<p class="text-xs text-slate-500 font-bold mb-2"><i class="fas fa-align-left mr-1"></i> ASUNTO</p>' +
+                '<p class="text-sm text-slate-700 leading-relaxed">' + reg.asunto + '</p>' +
+                '</div>' +
+                '<div class="p-4 bg-slate-50 rounded-lg">' +
+                '<p class="text-xs text-slate-500 font-bold mb-2"><i class="fas fa-calendar-alt mr-1"></i> FECHA DE REGISTRO</p>' +
+                '<p class="text-sm text-slate-700">' + fecha + '</p>' +
+                '</div>' +
+                '</div>';
+            
+            document.getElementById('modal-view-content').innerHTML = html;
+            document.getElementById('modal-view').style.display = 'block';
+        }
+        
+        function cerrarModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+        
+        function duplicarRegistro(idx) {
+            const regs = obtenerRegistros();
+            const reg = regs[idx];
+            
+            document.getElementById('sel-tramite').value = reg.homoclave || '';
+            document.getElementById('txt-bitacora').value = '';
+            document.getElementById('txt-asunto').value = reg.asunto;
+            
+            const len = reg.asunto.length;
+            document.getElementById('char-count').textContent = len + '/500';
+            
+            window.scrollTo({top: 0, behavior: 'smooth'});
+            mostrarAlerta('info', 'Registro duplicado. Modifique y presione Guardar');
+        }
+        
+        function renderizarTodo() {
+            renderizarCatalogo();
+            renderizarSelector();
+            renderizarTabla();
+            actualizarEstadisticas();
+        }
+        
+        function renderizarCatalogo() {
+            const cat = obtenerCatalogo();
+            const lista = document.getElementById('catalogo-list');
+            if (cat.length === 0) {
+                lista.innerHTML = '<p class="text-xs text-slate-500 italic text-center py-2">Sin trámites</p>';
+                return;
+            }
+            lista.innerHTML = cat.map(function(c) {
+                return '<div class="flex items-center justify-between bg-white p-2 rounded border border-slate-200">' +
+                    '<div class="flex-1">' +
+                    '<p class="text-xs font-bold text-slate-700">' + c.h + '</p>' +
+                    '<p class="text-[10px] text-slate-500">' + c.n + '</p>' +
+                    '</div>' +
+                    '<button onclick="eliminarDelCatalogo(\'' + c.h + '\')" class="text-red-400 hover:text-red-600 px-2">' +
+                    '<i class="fas fa-trash text-xs"></i>' +
+                    '</button></div>';
+            }).join('');
+        }
+        
+        function renderizarSelector() {
+            const cat = obtenerCatalogo();
+            const sel = document.getElementById('sel-tramite');
+            if (cat.length === 0) {
+                sel.innerHTML = '<option value="">-- Sin trámites --</option>';
+            } else {
+                sel.innerHTML = '<option value="">-- Seleccione --</option>' + cat.map(function(c) {
+                    return '<option value="' + c.h + '">' + c.h + ' - ' + c.n + '</option>';
+                }).join('');
+            }
+        }
+        
+        function renderizarTabla() {
+            const regs = obtenerRegistros();
+            const tbody = document.getElementById('table-body');
+            
+            if (regs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="3" class="p-12 text-center text-slate-400">' +
+                    '<i class="fas fa-inbox text-5xl mb-3 opacity-50"></i>' +
+                    '<p class="font-semibold">No hay registros</p></td></tr>';
+                return;
+            }
+            
+            const reversed = regs.slice().reverse();
+            tbody.innerHTML = reversed.map(function(r, i) {
+                const idx = regs.length - 1 - i;
+                const fecha = new Date(r.fecha).toLocaleDateString('es-MX', {
+                    day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
+                });
+                const rowClass = r.sincronizado ? 'row-synced' : 'row-local';
+                
+                let html = '<tr class="table-row-hover ' + rowClass + '">';
+                html += '<td class="p-4"><div class="space-y-1">';
+                html += '<p class="font-bold text-slate-900 font-mono text-sm">' + r.determinante + '</p>';
+                html += '<p class="text-[10px] text-slate-500"><i class="fas fa-calendar-alt mr-1"></i>' + fecha + '</p>';
+                html += '<p class="text-xs font-bold text-purple-700 mt-1"><i class="fas fa-folder mr-1"></i>' + (r.homoclave || 'N/A') + '</p>';
+                html += '<p class="text-[10px] text-slate-600"><i class="fas fa-hashtag mr-1"></i>' + (r.bitacora_referencia || 'N/A') + '</p>';
+                html += '<p class="text-xs text-slate-700 mt-1">' + r.asunto.substring(0, 100) + '...</p>';
+                html += '</div></td>';
+                html += '<td class="p-4 text-center">';
+                if (r.sincronizado) {
+                    html += '<span class="badge bg-blue-100 text-blue-800">';
+                    html += '<i class="fas fa-cloud-check"></i> Sincronizado';
+                } else {
+                    html += '<span class="badge bg-amber-100 text-amber-800">';
+                    html += '<i class="fas fa-clock"></i> Pendiente';
+                }
+                html += '</span></td>';
+                html += '<td class="p-4"><div class="flex items-center justify-center gap-1">';
+                html += '<button onclick="verDetalle(' + idx + ')" class="btn-action p-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg" title="Ver detalle"><i class="fas fa-eye"></i></button>';
+                if (!r.sincronizado && !r.bloqueado) {
+                    html += '<button onclick="eliminar(' + idx + ')" class="btn-action p-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg" title="Eliminar"><i class="fas fa-trash"></i></button>';
+                } else {
+                    html += '<span class="text-slate-400 text-xs px-2" title="Registro protegido"><i class="fas fa-lock"></i></span>';
+                }
+                html += '<button onclick="duplicarRegistro(' + idx + ')" class="btn-action p-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg" title="Duplicar"><i class="fas fa-copy"></i></button>';
+                html += '</div></td></tr>';
+                return html;
+            }).join('');
+        }
+        
+        function actualizarEstadisticas() {
+            const regs = obtenerRegistros();
+            const cat = obtenerCatalogo();
+            const sincronizados = regs.filter(function(r) { return r.sincronizado; }).length;
+            const pendientes = regs.filter(function(r) { return !r.sincronizado; }).length;
+            
+            document.getElementById('stat-total').textContent = regs.length;
+            document.getElementById('stat-sincronizados').textContent = sincronizados;
+            document.getElementById('stat-pendientes').textContent = pendientes;
+            document.getElementById('stat-tramites').textContent = cat.length;
+            
+            const semanaAtras = new Date();
+            semanaAtras.setDate(semanaAtras.getDate() - 7);
+            const estaSemana = regs.filter(function(r) { return new Date(r.fecha) >= semanaAtras; }).length;
+            document.getElementById('stat-semana').textContent = estaSemana;
+        }
+        
+        function buscarEnTabla() {
+            const busqueda = document.getElementById('search-input').value.toLowerCase();
+            const filas = document.querySelectorAll('#table-body tr');
+            filas.forEach(function(fila) {
+                const texto = fila.textContent.toLowerCase();
+                fila.style.display = texto.includes(busqueda) ? '' : 'none';
+            });
+        }
+        
+        function exportarCSV() {
+            const regs = obtenerRegistros();
+            if (regs.length === 0) {
+                mostrarAlerta('info', 'No hay datos para exportar');
+                return;
+            }
+            
+            let csv = 'Determinante,Consecutivo,Año,Área,Homoclave,Bitácora,Asunto,Fecha,Sincronizado\n';
+            regs.forEach(function(r) {
+                csv += '"' + r.determinante + '",' + r.consecutivo + ',' + r.anio + ',"' + r.area_siglas + '","' + (r.homoclave || '') + '","' + (r.bitacora_referencia || '') + '","' + r.asunto.replace(/"/g, '""') + '","' + r.fecha + '",' + (r.sincronizado ? 'Si' : 'No') + '\n';
+            });
+            
+            const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'Exportacion_' + AREA_SIGLAS + '_' + new Date().toISOString().split('T')[0] + '.csv';
+            link.click();
+            mostrarAlerta('success', 'Archivo CSV exportado correctamente');
+        }
+        
+        function guardarRespaldoAutomatico() {
+            const regs = obtenerRegistros();
+            const cat = obtenerCatalogo();
+            
+            if (regs.length === 0 && cat.length === 0) return;
+            
+            const respaldo = {
+                area: AREA_SIGLAS,
+                nombre: AREA_NOMBRE,
+                fecha: new Date().toISOString(),
+                registros: regs,
+                catalogo: cat,
+                version: '2.0.0'
+            };
+            
+            const blob = new Blob([JSON.stringify(respaldo, null, 2)], {type: 'application/json'});
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = 'Respaldo_' + AREA_SIGLAS + '_' + new Date().toISOString().split('T')[0] + '.json';
+            
+            console.log("�?Respaldo automático generado:", new Date().toLocaleTimeString());
+        }
+        
+        function imprimirTabla() {
+            window.print();
+        }
+        
+        function actualizarFecha() {
+            document.getElementById('last-update').textContent = new Date().toLocaleString('es-MX', {
+                day: '2-digit',
+                month: 'short',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+        
+        function mostrarCargando(mostrar) {
+            let overlay = document.getElementById('loading-overlay');
+            if (mostrar) {
+                if (!overlay) {
+                    overlay = document.createElement('div');
+                    overlay.id = 'loading-overlay';
+                    overlay.className = 'loading-overlay';
+                    overlay.innerHTML = '<div class="text-center"><div class="spinner mx-auto mb-4"></div><p class="text-white font-bold text-lg">Cargando datos...</p></div>';
+                    document.body.appendChild(overlay);
+                }
+            } else {
+                if (overlay) {
+                    overlay.remove();
+                }
+            }
+        }
+        
+        function mostrarAlerta(tipo, mensaje) {
+            const colores = {
+                success: 'bg-emerald-500',
+                error: 'bg-red-500',
+                warning: 'bg-amber-500',
+                info: 'bg-blue-500'
+            };
+            const iconos = {
+                success: 'fa-check-circle',
+                error: 'fa-exclamation-circle',
+                warning: 'fa-exclamation-triangle',
+                info: 'fa-info-circle'
+            };
+            const alerta = document.createElement('div');
+            alerta.className = 'fixed top-4 right-4 ' + colores[tipo] + ' text-white px-6 py-4 rounded-lg shadow-2xl z-50 flex items-start gap-3 animate-fade-in max-w-md';
+            alerta.innerHTML = '<i class="fas ' + iconos[tipo] + ' text-xl mt-0.5"></i>' +
+                '<div class="flex-1">' +
+                '<div class="font-bold mb-1">' + tipo.toUpperCase() + '</div>' +
+                '<div class="text-sm">' + mensaje + '</div>' +
+                '</div>' +
+                '<button onclick="this.parentElement.remove()" class="text-white text-xl hover:bg-white hover:bg-opacity-20 p-1 rounded">×</button>';
+            document.body.appendChild(alerta);
+            setTimeout(function() {
+                alerta.style.opacity = '0';
+                alerta.style.transition = 'opacity 0.3s';
+                setTimeout(function() { alerta.remove(); }, 300);
+            }, 5000);
+        }
+        
+        window.onclick = function(event) {
+            if (event.target.className === 'modal') {
+                event.target.style.display = 'none';
+            }
+        }
+    </script>
+</body>
+</html>
