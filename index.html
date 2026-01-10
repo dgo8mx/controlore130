@@ -3,76 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Control de Determinantes - SEMARNAT Durango</title>
+    <title>Sistema SEMARNAT Durango</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; }
-        .bg-institucional { background: linear-gradient(135deg, #13322B 0%, #1a4838 100%); }
-        .feature-card {
-            transition: all 0.3s ease;
-            border-left: 4px solid #10b981;
+        body { font-family: 'Inter', sans-serif; }
+        .area-card { transition: all 0.3s ease; }
+        .area-card:hover { transform: translateY(-5px); box-shadow: 0 10px 20px rgba(0,0,0,0.1); }
+        .area-card.disabled { opacity: 0.4; cursor: not-allowed; }
+        .area-card.active { 
+            border: 3px solid #fbbf24; 
+            box-shadow: 0 0 20px rgba(251, 191, 36, 0.5);
+            animation: pulse 2s infinite;
         }
-        .feature-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+        .area-card.admin-access {
+            border: 3px solid #10b981;
+            box-shadow: 0 0 20px rgba(16, 185, 129, 0.5);
         }
-        .check-icon {
-            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            color: white;
-        }
-        .area-link {
-            transition: all 0.2s ease;
-        }
-        .area-link:hover {
-            transform: scale(1.05);
-            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
-        }
-        .formato-determinante {
-            background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
-            border: 2px solid #cbd5e1;
-            padding: 2rem;
-            border-radius: 1rem;
-            margin: 2rem 0;
-        }
-        .formato-box {
-            background: white;
-            border: 2px dashed #64748b;
-            padding: 1.5rem;
-            border-radius: 0.5rem;
-            text-align: center;
-            font-family: 'Courier New', monospace;
-            font-weight: bold;
-            font-size: 1.5rem;
-            color: #1e293b;
-        }
-        .descripcion-item {
-            background: white;
-            padding: 0.75rem;
-            border-radius: 0.5rem;
-            border-left: 3px solid #10b981;
-            margin: 0.5rem 0;
+        @keyframes pulse {
+            0%, 100% { box-shadow: 0 0 20px rgba(251, 191, 36, 0.5); }
+            50% { box-shadow: 0 0 30px rgba(251, 191, 36, 0.8); }
         }
     </style>
 </head>
 <body class="bg-slate-50">
     
-    <header class="bg-institucional text-white p-6 shadow-2xl">
-        <div class="container mx-auto">
+    <header class="bg-gradient-to-r from-emerald-700 to-emerald-800 text-white p-6 shadow-xl">
+        <div class="container mx-auto flex justify-between items-center">
             <div class="flex items-center gap-4">
-               -🌲🌲🌲-
+                <i class="fas fa-tree text-4xl"></i>
                 <div>
                     <h1 class="text-3xl font-bold">Sistema de Control de Determinantes</h1>
-                    <p class="text-emerald-200 mt-1">SEMARNAT Durango - </p>
-                    <p class="text-xs text-emerald-300 mt-1">
-                        <i class="fas fa-calendar-alt mr-1"></i> Actualizado: Enero 2026
-                    </p>
+                    <p class="text-emerald-200 mt-1">SEMARNAT Durango - Enero 2026</p>
+                </div>
+            </div>
+            <div class="text-right">
+                <p class="text-emerald-200 text-sm">Usuario</p>
+                <p class="font-bold text-lg" id="userName">...</p>
+                <p class="text-xs text-emerald-300" id="userArea"></p>
+                <div class="mt-2 flex gap-2 justify-end">
+                    <button onClick="goToAdmin()" id="adminButton" class="hidden bg-purple-500 hover:bg-purple-600 px-4 py-1 rounded text-sm">
+                        <i class="fas fa-cog mr-1"></i> Panel Admin
+                    </button>
+                    <button onClick="logout()" class="bg-red-500 hover:bg-red-600 px-4 py-1 rounded text-sm">
+                        <i class="fas fa-sign-out-alt mr-1"></i> Salir
+                    </button>
                 </div>
             </div>
         </div>
@@ -80,134 +56,34 @@
 
     <main class="container mx-auto px-6 py-8">
         
+        <div class="bg-gradient-to-r from-emerald-500 to-emerald-600 text-white rounded-xl shadow-lg p-6 mb-8">
+            <h2 class="text-2xl font-bold mb-2">
+                <i class="fas fa-hand-sparkles mr-2"></i> Bienvenido/a
+            </h2>
+            <p id="welcomeText">Cargando información...</p>
+        </div>
+
         <div class="bg-white rounded-2xl shadow-xl p-8 mb-8">
             <h2 class="text-2xl font-bold text-slate-800 mb-6">
-                <i class="fas fa-map-marked-alt text-emerald-600 mr-2"></i> Áreas Sustantivas de trabajo
+                <i class="fas fa-map-marked-alt text-emerald-600 mr-2"></i> Áreas Sustantivas de Trabajo
             </h2>
-            <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                
-                <a href="AREA_VO.html" target="_blank" class="area-link bg-gradient-to-br from-emerald-500 to-emerald-600 text-white p-6 rounded-xl shadow-lg">
-                    <div class="text-center">
-                        <div class="bg-white bg-opacity-20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <span class="text-2xl font-bold">VO</span>
-                        </div>
-                        <h3 class="font-bold text-lg">Centro de Atención Regional Villa Ocampo</h3>
-                        <p class="text-xs text-emerald-100 mt-2">Abrir área →</p>
-                    </div>
-                </a>
-                
-                <a href="AREA_AR.html" target="_blank" class="area-link bg-gradient-to-br from-blue-500 to-blue-600 text-white p-6 rounded-xl shadow-lg">
-                    <div class="text-center">
-                        <div class="bg-white bg-opacity-20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <span class="text-2xl font-bold">AR</span>
-                        </div>
-                        <h3 class="font-bold text-lg">Unidad de Aprovechamiento y Restauración</h3>
-                        <p class="text-xs text-blue-100 mt-2">Abrir área →</p>
-                    </div>
-                </a>
-                
-                <a href="AREA_CC.html" target="_blank" class="area-link bg-gradient-to-br from-purple-500 to-purple-600 text-white p-6 rounded-xl shadow-lg">
-                    <div class="text-center">
-                        <div class="bg-white bg-opacity-20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <span class="text-2xl font-bold">CC</span>
-                        </div>
-                        <h3 class="font-bold text-lg">Departamento de Contacto Ciudadano</h3>
-                        <p class="text-xs text-purple-100 mt-2">Abrir área →</p>
-                    </div>
-                </a>
-                
-                <a href="AREA_CU.html" target="_blank" class="area-link bg-gradient-to-br from-pink-500 to-pink-600 text-white p-6 rounded-xl shadow-lg">
-                    <div class="text-center">
-                        <div class="bg-white bg-opacity-20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <span class="text-2xl font-bold">CU</span>
-                        </div>
-                        <h3 class="font-bold text-lg">Departamento de Servicios Forestales y de Suelos</h3>
-                        <p class="text-xs text-pink-100 mt-2">Abrir área →</p>
-                    </div>
-                </a>
-                
-                <a href="AREA_DA.html" target="_blank" class="area-link bg-gradient-to-br from-indigo-500 to-indigo-600 text-white p-6 rounded-xl shadow-lg">
-                    <div class="text-center">
-                        <div class="bg-white bg-opacity-20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <span class="text-2xl font-bold">DA</span>
-                        </div>
-                        <h3 class="font-bold text-lg">Departamento de Administración</h3>
-                        <p class="text-xs text-indigo-100 mt-2">Abrir área →</p>
-                    </div>
-                </a>
-                
-                <a href="AREA_DG.html" target="_blank" class="area-link bg-gradient-to-br from-red-500 to-red-600 text-white p-6 rounded-xl shadow-lg">
-                    <div class="text-center">
-                        <div class="bg-white bg-opacity-20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <span class="text-2xl font-bold">DG</span>
-                        </div>
-                        <h3 class="font-bold text-lg">Coordinación Documentación Forestal Durango</h3>
-                        <p class="text-xs text-red-100 mt-2">Abrir área →</p>
-                    </div>
-                </a>
-                
-                <a href="AREA_ES.html" target="_blank" class="area-link bg-gradient-to-br from-yellow-500 to-yellow-600 text-white p-6 rounded-xl shadow-lg">
-                    <div class="text-center">
-                        <div class="bg-white bg-opacity-20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <span class="text-2xl font-bold">ES</span>
-                        </div>
-                        <h3 class="font-bold text-lg">Centro de Atención Regional El Salto</h3>
-                        <p class="text-xs text-yellow-100 mt-2">Abrir área →</p>
-                    </div>
-                </a>
-                
-                <a href="AREA_GA.html" target="_blank" class="area-link bg-gradient-to-br from-teal-500 to-teal-600 text-white p-6 rounded-xl shadow-lg">
-                    <div class="text-center">
-                        <div class="bg-white bg-opacity-20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <span class="text-2xl font-bold">GA</span>
-                        </div>
-                        <h3 class="font-bold text-lg">Unidad de Gestión Ambiental</h3>
-                        <p class="text-xs text-teal-100 mt-2">Abrir área →</p>
-                    </div>
-                </a>
-                
-                <a href="AREA_IA.html" target="_blank" class="area-link bg-gradient-to-br from-cyan-500 to-cyan-600 text-white p-6 rounded-xl shadow-lg">
-                    <div class="text-center">
-                        <div class="bg-white bg-opacity-20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <span class="text-2xl font-bold">IA</span>
-                        </div>
-                        <h3 class="font-bold text-lg">Departamento de Impacto y Riesgo Ambiental</h3>
-                        <p class="text-xs text-cyan-100 mt-2">Abrir área →</p>
-                    </div>
-                </a>
-                
-                <a href="AREA_SP.html" target="_blank" class="area-link bg-gradient-to-br from-orange-500 to-orange-600 text-white p-6 rounded-xl shadow-lg">
-                    <div class="text-center">
-                        <div class="bg-white bg-opacity-20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <span class="text-2xl font-bold">SP</span>
-                        </div>
-                        <h3 class="font-bold text-lg">Centro de Atención Regional Santiago Papasquiaro</h3>
-                        <p class="text-xs text-orange-100 mt-2">Abrir área →</p>
-                    </div>
-                </a>
-                
-                <a href="AREA_UJ.html" target="_blank" class="area-link bg-gradient-to-br from-slate-600 to-slate-700 text-white p-6 rounded-xl shadow-lg">
-                    <div class="text-center">
-                        <div class="bg-white bg-opacity-20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <span class="text-2xl font-bold">UJ</span>
-                        </div>
-                        <h3 class="font-bold text-lg">Unidad Jurídica</h3>
-                        <p class="text-xs text-slate-300 mt-2">Abrir área →</p>
-                    </div>
-                </a>
-
-                <a href="AREA_VS.html" target="_blank" class="area-link bg-gradient-to-br from-lime-500 to-lime-600 text-white p-6 rounded-xl shadow-lg">
-                    <div class="text-center">
-                        <div class="bg-white bg-opacity-20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
-                            <span class="text-2xl font-bold">VS</span>
-                        </div>
-                        <h3 class="font-bold text-lg">Enlace de Recursos Naturales y Vida Silvestre</h3>
-                        <p class="text-xs text-lime-100 mt-2">Abrir área →</p>
-                    </div>
-                </a>
-                
-            </div>
+            <div id="areasContainer" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4"></div>
         </div>
+
+        <div class="bg-yellow-50 border-2 border-yellow-400 rounded-xl p-6 mb-8">
+            <h3 class="text-lg font-bold text-yellow-800 mb-2">
+                <i class="fas fa-info-circle mr-2"></i> Información
+            </h3>
+            <ul class="text-yellow-700 space-y-2 text-sm" id="infoList">
+                <li><i class="fas fa-check mr-2"></i> Solo puede acceder al área asignada</li>
+                <li><i class="fas fa-check mr-2"></i> Su área está resaltada con borde dorado</li>
+                <li><i class="fas fa-clock mr-2"></i> Sesión válida por 8 horas</li>
+            </ul>
+        </div>
+
+    </main>
+
+
 
         <!-- APARTADO: PROCEDIMIENTO INTERNO (ANTES DE GUÍA DE USO) -->
         <div class="bg-white rounded-2xl shadow-xl p-8 mb-8">
@@ -547,18 +423,225 @@
                     </ul>
                 </div>
             </div>
-        </div>
-
-    </main>
+  
 
     <footer class="bg-slate-800 text-white py-6 mt-12">
         <div class="container mx-auto px-6 text-center">
-            <p class="text-slate-400">
-                <i class="fas fa-code mr-2"></i> Sistema desarrollado para SEMARNAT Durango
-            </p>
-            <p class="text-slate-500 text-sm mt-2">Versión 2.0.0 - Enero 2026</p>
+            <p class="text-slate-400">Sistema desarrollado para SEMARNAT Durango</p>
+			<p class="text-slate-200">By IA-Trinidad Valenzuela Hermosillo</p>
+            <p class="text-slate-500 text-sm mt-2">Versión 3.0 - Enero 2026</p>
         </div>
     </footer>
+
+    <script>
+        const CONFIG = {
+            SUPABASE_URL: 'https://rnwksmgwmnjatrgezaaa.supabase.co',
+            SUPABASE_KEY: 'sb_publishable_TQIHyFu5lTwLl6GvF2c7zw_2q4YeSls'
+        };
+        
+        let clienteSupabase;
+        let sesionActual;
+
+        const areas = [
+            { codigo: 'UJ', nombre: 'Unidad Jurídica', responsable: 'Francisco Javier Guardado Marín', color: 'from-emerald-500 to-emerald-600', archivo: 'AREA_UJ.html' },
+            { codigo: 'CC', nombre: 'Departamento de Contacto Ciudadano', responsable: 'María de Lourdes Michel García', color: 'from-purple-500 to-purple-600', archivo: 'AREA_CC.html' },
+            { codigo: 'DA', nombre: 'Departamento de Administración', responsable: 'Fidel Soto Montoya', color: 'from-indigo-500 to-indigo-600', archivo: 'AREA_DA.html' },
+            { codigo: 'GA', nombre: 'Unidad de Gestión Ambiental', responsable: 'Trinidad Valenzuela Hermosillo', color: 'from-teal-500 to-teal-600', archivo: 'AREA_GA.html' },
+            { codigo: 'AR', nombre: 'Unidad de Aprovechamiento y Restauración Forestal', responsable: 'Rubén Lozano Orosco', color: 'from-blue-500 to-blue-600', archivo: 'AREA_AR.html' },
+            { codigo: 'IA', nombre: 'Departamento de Impacto y Riesgo Ambiental', responsable: 'Elías Chacón de la Cruz', color: 'from-cyan-500 to-cyan-600', archivo: 'AREA_IA.html' },
+            { codigo: 'CU', nombre: 'Departamento de Servicios Forestales y de Suelos', responsable: 'Raúl Quiroga Gómez', color: 'from-pink-500 to-pink-600', archivo: 'AREA_CU.html' },
+            { codigo: 'SP', nombre: 'Centro de Atención Regional Santiago Papasquiaro', responsable: 'Brenda', color: 'from-orange-500 to-orange-600', archivo: 'AREA_SP.html' },
+            { codigo: 'ES', nombre: 'Centro de Atención Regional El Salto', responsable: 'María Elena Díaz Mancinas', color: 'from-yellow-500 to-yellow-600', archivo: 'AREA_ES.html' },
+            { codigo: 'VO', nombre: 'Centro de Atención Regional Villa Ocampo', responsable: 'Manuel Hernández Silerio', color: 'from-green-500 to-green-600', archivo: 'AREA_VO.html' },
+            { codigo: 'DG', nombre: 'Coordinación Documentación Forestal Durango', responsable: 'María Azucena Corral Valdez', color: 'from-red-500 to-red-600', archivo: 'AREA_DG.html' },
+            { codigo: 'VS', nombre: 'Enlace de Recursos Naturales y Vida Silvestre', responsable: 'Manuel Alfredo Sariñana Pérez', color: 'from-lime-500 to-lime-600', archivo: 'AREA_VS.html' }
+        ];
+
+        function checkSession() {
+            const sessionData = localStorage.getItem('sesion_semarnat');
+            if (!sessionData) {
+                window.location.href = 'login.html';
+                return false;
+            }
+
+            try {
+                sesionActual = JSON.parse(sessionData);
+                const lastAccess = new Date(localStorage.getItem('ultimo_acceso'));
+                const hours = (new Date() - lastAccess) / (1000 * 60 * 60);
+
+                if (hours > 8) {
+                    alert('Su sesión ha expirado');
+                    logout();
+                    return false;
+                }
+
+                localStorage.setItem('ultimo_acceso', new Date().toISOString());
+
+                // CAMBIO: Solo root va a admin.html automáticamente
+                if (sesionActual.username === 'root') {
+                    window.location.href = 'admin.html';
+                    return false;
+                }
+
+                return true;
+            } catch {
+                logout();
+                return false;
+            }
+        }
+
+        function loadUserInfo() {
+            document.getElementById('userName').textContent = sesionActual.nombre;
+            
+            // CAMBIO: Verificar si es admin
+            const esAdmin = sesionActual.username === 'admin';
+            
+            // Mostrar botón de admin si es admin (pero no root)
+            if (esAdmin) {
+                document.getElementById('adminButton').classList.remove('hidden');
+            }
+            
+            if (esAdmin) {
+                // Admin tiene acceso a todas las áreas
+                document.getElementById('userArea').textContent = 'Acceso: TODAS LAS ÁREAS';
+                document.getElementById('welcomeText').textContent = 
+                    'Como administrador, tiene acceso completo a todas las áreas del sistema. Las áreas están resaltadas en verde.';
+                
+                // Cambiar información en el panel amarillo
+                document.getElementById('infoList').innerHTML = `
+                    <li><i class="fas fa-crown mr-2"></i> Acceso completo como administrador</li>
+                    <li><i class="fas fa-check mr-2"></i> Puede acceder a todas las áreas (borde verde)</li>
+                    <li><i class="fas fa-cog mr-2"></i> Panel de administración disponible</li>
+                    <li><i class="fas fa-clock mr-2"></i> Sesión válida por 8 horas</li>
+                `;
+            } else {
+                // Usuario normal
+                const areaInfo = areas.find(a => a.codigo === sesionActual.area);
+                if (areaInfo) {
+                    document.getElementById('userArea').textContent = `Área: ${areaInfo.codigo} - ${areaInfo.responsable}`;
+                    document.getElementById('welcomeText').textContent = 
+                        `Tiene acceso al área: ${areaInfo.codigo} - ${areaInfo.nombre}. Haga clic en el área resaltada para comenzar.`;
+                } else {
+                    document.getElementById('userArea').textContent = 'Sin área asignada';
+                    document.getElementById('welcomeText').textContent = 'No tiene área asignada. Contacte al administrador.';
+                }
+            }
+        }
+
+        function showAreas() {
+            const container = document.getElementById('areasContainer');
+            container.innerHTML = '';
+
+            // CAMBIO: Verificar si es admin
+            const esAdmin = sesionActual.username === 'admin';
+
+            areas.forEach(area => {
+                // Usuario admin tiene acceso a todas las áreas
+                // Usuario normal solo a su área asignada
+                const hasAccess = esAdmin || area.codigo === sesionActual.area;
+                
+                const card = document.createElement('div');
+                
+                // Cambiar estilo para admin (verde) vs usuario normal (dorado)
+                let cardClass = `area-card bg-gradient-to-br ${area.color} text-white p-6 rounded-xl shadow-lg cursor-pointer `;
+                if (hasAccess) {
+                    cardClass += esAdmin ? 'admin-access' : 'active';
+                } else {
+                    cardClass += 'disabled';
+                }
+                
+                card.className = cardClass;
+                
+                card.innerHTML = `
+                    <div class="text-center">
+                        <div class="bg-white bg-opacity-20 w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-3">
+                            <span class="text-2xl font-bold">${area.codigo}</span>
+                        </div>
+                        <h3 class="font-bold text-lg mb-2">${area.nombre}</h3>
+                        <p class="text-xs opacity-75 mb-2">${area.responsable}</p>
+                        ${hasAccess ? 
+                            `<p class="text-xs opacity-90"><i class="fas fa-${esAdmin ? 'crown' : 'unlock-alt'} mr-1"></i> Clic para abrir</p>` :
+                            '<p class="text-xs opacity-50"><i class="fas fa-lock mr-1"></i> Acceso restringido</p>'
+                        }
+                    </div>
+                `;
+                
+                if (hasAccess) {
+                    card.onclick = () => openArea(area);
+                }
+                
+                container.appendChild(card);
+            });
+        }
+
+        async function openArea(area) {
+            console.log('Abriendo área:', area.codigo);
+            
+            if (clienteSupabase) {
+                try {
+                    await clienteSupabase.from('auditoria_accesos').insert({
+                        username: sesionActual.username,
+                        tipo_evento: 'acceso_area',
+                        fecha_hora: new Date().toISOString(),
+                        exitoso: true,
+                        detalles: area.codigo
+                    });
+                } catch (e) {
+                    console.log('Auditoría no disponible');
+                }
+            }
+            
+            window.open(area.archivo, '_blank');
+        }
+
+        function goToAdmin() {
+            window.location.href = 'admin.html';
+        }
+
+        function logout() {
+            localStorage.removeItem('sesion_semarnat');
+            localStorage.removeItem('ultimo_acceso');
+            window.location.href = 'login.html';
+        }
+
+        setInterval(() => {
+            const lastAccess = localStorage.getItem('ultimo_acceso');
+            if (!lastAccess) return;
+            
+            const hours = (new Date() - new Date(lastAccess)) / (1000 * 60 * 60);
+            if (hours > 8) {
+                alert('Su sesión ha expirado');
+                logout();
+            }
+        }, 5 * 60 * 1000);
+
+        window.onload = async () => {
+            console.log('Iniciando dashboard...');
+            
+            if (!checkSession()) return;
+            
+            loadUserInfo();
+            showAreas();
+            
+            try {
+                if (window.supabase) {
+                    clienteSupabase = window.supabase.createClient(CONFIG.SUPABASE_URL, CONFIG.SUPABASE_KEY);
+                    
+                    await clienteSupabase.from('auditoria_accesos').insert({
+                        username: sesionActual.username,
+                        tipo_evento: 'acceso_dashboard',
+                        fecha_hora: new Date().toISOString(),
+                        exitoso: true,
+                        detalles: sesionActual.area || 'ADMIN_ALL'
+                    });
+                }
+            } catch (e) {
+                console.log('Auditoría no disponible');
+            }
+            
+            console.log('Dashboard listo');
+        };
+    </script>
 
 </body>
 </html>
