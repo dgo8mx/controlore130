@@ -596,7 +596,7 @@
             const anio = new Date().getFullYear();
             const regsDelAnio = regs.filter(function(r) { return r.anio === anio; });
             const consecutivo = regsDelAnio.length + 1;
-            const determinante = 'OR-130/' + AREA_SIGLAS + '-' + String(consecutivo).padStart(4, '0') + '/' + anio;
+            const determinante = 'OR-130/' + AREA_SIGLAS + '/' + String(consecutivo).padStart(4, '0') + '/' + anio;
             
             const nuevoRegistro = {
                 determinante: determinante,
