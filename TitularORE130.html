@@ -493,7 +493,7 @@
             document.getElementById('stat-total').innerText = globalData.length.toLocaleString();
             
             const areasUnicas = new Set(globalData.map(r => r.area_siglas));
-            document.getElementById('stat-areas').innerText = `${areasUnicas.size} / 12`;
+            document.getElementById('stat-areas').innerText = `${areasUnicas.size} / 13`;
             
             const hoyStr = new Date().toISOString().split('T')[0];
             const hoyCount = globalData.filter(r => r.fecha && r.fecha.includes(hoyStr)).length;
