@@ -619,13 +619,7 @@ async function openArea(area) {
     // Scroll al inicio
     window.scrollTo(0, 0);
 }
-      
-    // Mostrar iframe con el área
-    document.getElementById('iframeTitle').innerHTML = 
-        `<i class="fas fa-folder-open text-emerald-600 mr-2"></i> ${area.codigo} - ${area.nombre}`;
-    document.getElementById('areaFrame').src = area.archivo;
-    document.getElementById('iframeContainer').classList.remove('hidden');
-}
+
         function goToAdmin() {
             window.location.href = 'admin.html';
         }
@@ -690,6 +684,7 @@ function closeIframe() {
 
 </body>
 </html>
+
 
 
 
