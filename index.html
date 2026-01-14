@@ -83,18 +83,18 @@
 
     </main>
 
-<!-- Contenedor para iframe -->
-<div id="iframeContainer" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50">
-    <div class="container mx-auto px-6 py-4 h-full flex flex-col">
-        <div class="bg-white rounded-t-xl shadow-xl p-4 flex justify-between items-center">
-            <h3 class="text-xl font-bold text-slate-800" id="iframeTitle">
-                <i class="fas fa-folder-open text-emerald-600 mr-2"></i> Área cargada
+<!-- Contenedor para iframe debajo del header -->
+<div id="iframeContainer" class="hidden container mx-auto px-6 pb-8">
+    <div class="bg-white rounded-xl shadow-xl overflow-hidden">
+        <div class="bg-emerald-600 text-white p-4 flex justify-between items-center">
+            <h3 class="text-xl font-bold" id="iframeTitle">
+                <i class="fas fa-folder-open mr-2"></i> Área cargada
             </h3>
-            <button onclick="closeIframe()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg">
-                <i class="fas fa-times mr-2"></i> Cerrar y volver
+            <button onclick="closeIframe()" class="bg-red-500 hover:bg-red-600 px-4 py-2 rounded-lg transition">
+                <i class="fas fa-times mr-2"></i> Cerrar
             </button>
         </div>
-        <iframe id="areaFrame" class="w-full flex-1 bg-white rounded-b-xl shadow-xl"></iframe>
+        <iframe id="areaFrame" class="w-full bg-white" style="height: 75vh; border: none;"></iframe>
     </div>
 </div>
 
@@ -607,16 +607,25 @@ async function openArea(area) {
         }
     }
     
+    // Ocultar el contenido principal
+    document.querySelector('main').classList.add('hidden');
+    
+    // Mostrar iframe con el área
+    document.getElementById('iframeTitle').innerHTML = 
+        `<i class="fas fa-folder-open mr-2"></i> ${area.codigo} - ${area.nombre}`;
+    document.getElementById('areaFrame').src = area.archivo;
+    document.getElementById('iframeContainer').classList.remove('hidden');
+    
+    // Scroll al inicio
+    window.scrollTo(0, 0);
+}
+      
     // Mostrar iframe con el área
     document.getElementById('iframeTitle').innerHTML = 
         `<i class="fas fa-folder-open text-emerald-600 mr-2"></i> ${area.codigo} - ${area.nombre}`;
     document.getElementById('areaFrame').src = area.archivo;
     document.getElementById('iframeContainer').classList.remove('hidden');
 }
-       {  
-    window.location.href = area.archivo;
-        }
-
         function goToAdmin() {
             window.location.href = 'admin.html';
         }
@@ -639,10 +648,17 @@ async function openArea(area) {
         }, 5 * 60 * 1000);
 
 		
-		function closeIframe() {
-    document.getElementById('iframeContainer').classList.add('hidden');
-    document.getElementById('areaFrame').src = '';
+function closeIframe() {
+    const container = document.getElementById('iframeContainer');
+    const frame = document.getElementById('areaFrame');
+    const mainContent = document.querySelector('main');
+    
+    container.classList.add('hidden');
+    frame.src = '';
+    mainContent.classList.remove('hidden');
 }
+
+		
 		
         window.onload = async () => {
             console.log('Iniciando dashboard...');
@@ -674,6 +690,7 @@ async function openArea(area) {
 
 </body>
 </html>
+
 
 
 
