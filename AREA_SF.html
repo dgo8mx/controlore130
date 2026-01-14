@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sanidad Forestal - SEMARNAT Durango</title>
+    <title>Control Sanidad Forestal - SEMARNAT Durango</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -111,9 +111,9 @@
         <div class="container mx-auto">
             <div class="flex justify-between items-center flex-wrap gap-4">
                 <div class="flex items-center gap-4">
-                    -🌲🌲-
+                    -馃尣馃尣-
                     <div>
-                        <h1 class="text-xl font-bold tracking-tight">AR/Sanidad Forestal</h1>
+                        <h1 class="text-xl font-bold tracking-tight">Sanidad Forestal</h1>
                         <p class="text-xs text-emerald-200">Control de Determinantes 2026</p>
                         <div class="flex items-center gap-2 mt-1">
                             <span id="dot" class="status-dot bg-gray-400"></span>
@@ -192,7 +192,7 @@
             <div class="stat-card" style="border-left-color: #06b6d4;">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-xs text-slate-500 font-semibold uppercase">Trámites</p>
+                        <p class="text-xs text-slate-500 font-semibold uppercase">Tr谩mites</p>
                         <h3 id="stat-tramites" class="text-2xl font-bold text-slate-800">0</h3>
                     </div>
                     <div class="bg-cyan-100 p-3 rounded-lg">
@@ -222,7 +222,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">
-                                <i class="fas fa-folder text-emerald-600 mr-1"></i> Trámite
+                                <i class="fas fa-folder text-emerald-600 mr-1"></i> Tr谩mite
                             </label>
                             <select id="sel-tramite" class="input-modern w-full p-3 rounded-lg text-sm font-medium">
                                 <option value="">-- Seleccione --</option>
@@ -230,7 +230,7 @@
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">
-                                <i class="fas fa-hashtag text-emerald-600 mr-1"></i> Bitácora Referencia
+                                <i class="fas fa-hashtag text-emerald-600 mr-1"></i> Bit谩cora Referencia
                             </label>
                             <input type="text" id="txt-bitacora" placeholder="Ej: 2026-001-VO" 
                                    class="input-modern w-full p-3 rounded-lg text-sm">
@@ -241,7 +241,7 @@
                         <label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">
                             <i class="fas fa-align-left text-emerald-600 mr-1"></i> Asunto del Determinante *
                         </label>
-                        <textarea id="txt-asunto" rows="3" maxlength="500" placeholder="Describa el asunto del determinante (mínimo 10 caracteres)" 
+                        <textarea id="txt-asunto" rows="3" maxlength="500" placeholder="Describa el asunto del determinante (m铆nimo 10 caracteres)" 
                                   class="input-modern w-full p-3 rounded-lg text-sm resize-none"></textarea>
                         <div class="flex justify-end mt-1">
                             <span id="char-count" class="text-[10px] text-slate-500 font-bold">0/500</span>
@@ -270,7 +270,7 @@
                             </div>
                             <div>
                                 <h2 class="text-xl font-bold">Historial de Determinantes</h2>
-                                <p class="text-xs text-slate-300 mt-1">Registros capturados del área</p>
+                                <p class="text-xs text-slate-300 mt-1">Registros capturados del 谩rea</p>
                             </div>
                         </div>
                         <div class="flex gap-2">
@@ -284,7 +284,7 @@
                 
                 <div class="p-6">
                     <div class="mb-4">
-                        <input type="text" id="search-input" placeholder="🔍 Buscar en registros..." 
+                        <input type="text" id="search-input" placeholder="馃攳 Buscar en registros..." 
                                onkeyup="buscarEnTabla()"
                                class="input-modern w-full p-3 rounded-lg text-sm">
                     </div>
@@ -326,8 +326,8 @@
                             <i class="fas fa-list text-2xl"></i>
                         </div>
                         <div>
-                            <h3 class="text-lg font-bold">Catálogo de Trámites</h3>
-                            <p class="text-xs text-purple-200 mt-1">Gestión de homoclaves</p>
+                            <h3 class="text-lg font-bold">Cat谩logo de Tr谩mites</h3>
+                            <p class="text-xs text-purple-200 mt-1">Gesti贸n de homoclaves</p>
                         </div>
                     </div>
                 </div>
@@ -343,7 +343,7 @@
                     
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-2">
-                            <i class="fas fa-file-text mr-1"></i> Nombre del Trámite
+                            <i class="fas fa-file-text mr-1"></i> Nombre del Tr谩mite
                         </label>
                         <input type="text" id="new-name" placeholder="Nombre completo" 
                                class="input-modern w-full p-2 rounded-lg text-sm">
@@ -351,15 +351,15 @@
                     
                     <button onclick="agregarCatalogo()" 
                             class="w-full bg-purple-600 hover:bg-purple-700 text-white px-4 py-3 rounded-lg font-bold text-sm shadow-lg transition">
-                        <i class="fas fa-plus mr-2"></i> Agregar al Catálogo
+                        <i class="fas fa-plus mr-2"></i> Agregar al Cat谩logo
                     </button>
                     
                     <div class="border-t pt-4">
                         <h4 class="text-xs font-bold text-slate-600 mb-3 uppercase tracking-wide">
-                            Trámites Registrados
+                            Tr谩mites Registrados
                         </h4>
                         <div id="catalogo-list" class="space-y-2 max-h-96 overflow-y-auto">
-                            <p class="text-xs text-slate-500 italic text-center py-2">Sin trámites</p>
+                            <p class="text-xs text-slate-500 italic text-center py-2">Sin tr谩mites</p>
                         </div>
                     </div>
                 </div>
@@ -372,8 +372,8 @@
                             <i class="fas fa-info-circle text-2xl"></i>
                         </div>
                         <div>
-                            <h3 class="text-lg font-bold">Información del Sistema</h3>
-                            <p class="text-xs text-blue-200 mt-1">Estado y configuración</p>
+                            <h3 class="text-lg font-bold">Informaci贸n del Sistema</h3>
+                            <p class="text-xs text-blue-200 mt-1">Estado y configuraci贸n</p>
                         </div>
                     </div>
                 </div>
@@ -381,13 +381,13 @@
                 <div class="p-6 space-y-3 text-xs">
                     <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                         <span class="font-semibold text-slate-600">
-                            <i class="fas fa-map-marker-alt text-emerald-600 mr-2"></i>Área
+                            <i class="fas fa-map-marker-alt text-emerald-600 mr-2"></i>脕rea
                         </span>
-                        <span class="font-bold text-slate-800">VO - Gestión Ambiental</span>
+                        <span class="font-bold text-slate-800">VO - Gesti贸n Ambiental</span>
                     </div>
                     <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                         <span class="font-semibold text-slate-600">
-                            <i class="fas fa-calendar-alt text-emerald-600 mr-2"></i>Última Actualización
+                            <i class="fas fa-calendar-alt text-emerald-600 mr-2"></i>脷ltima Actualizaci贸n
                         </span>
                         <span id="last-update" class="font-mono text-slate-700">--</span>
                     </div>
@@ -401,7 +401,7 @@
                     </div>
                     <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                         <span class="font-semibold text-slate-600">
-                            <i class="fas fa-shield-alt text-emerald-600 mr-2"></i>Versión
+                            <i class="fas fa-shield-alt text-emerald-600 mr-2"></i>Versi贸n
                         </span>
                         <span class="font-mono text-slate-700">2.0.0</span>
                     </div>
@@ -439,12 +439,12 @@
         let registroEditando = null;
         
         window.onload = async function() {
-            console.log("=== INICIALIZANDO ÁREA: " + AREA_SIGLAS + " ===");
+            console.log("=== INICIALIZANDO 脕REA: " + AREA_SIGLAS + " ===");
             try {
                 _sb = supabase.createClient(SB_URL, SB_KEY);
-                console.log("�?Cliente Supabase creado");
+                console.log("鉁?Cliente Supabase creado");
             } catch(e) {
-                console.error("�?Error al crear cliente:", e);
+                console.error("鉁?Error al crear cliente:", e);
             }
             
             inicializarCatalogo();
@@ -456,7 +456,7 @@
             actualizarFecha();
             
             setInterval(guardarRespaldoAutomatico, 60000);
-            console.log("�?Sistema inicializado");
+            console.log("鉁?Sistema inicializado");
         };
         
         function configurarContador() {
@@ -480,7 +480,7 @@
             const text = document.getElementById('status-text');
             dot.className = "status-dot bg-blue-500";
             text.textContent = "Probando...";
-            mostrarAlerta('info', 'Probando conexión...');
+            mostrarAlerta('info', 'Probando conexi贸n...');
             
             try {
                 const result = await _sb.from('registro_oficios').select('id').limit(1);
@@ -488,14 +488,14 @@
                 conectado = true;
                 dot.className = "status-dot bg-emerald-500 animate-pulse-dot";
                 text.textContent = "Conectado";
-                mostrarAlerta('success', 'Conexión exitosa con la base de datos');
-                console.log("�?Conexión exitosa");
+                mostrarAlerta('success', 'Conexi贸n exitosa con la base de datos');
+                console.log("鉁?Conexi贸n exitosa");
             } catch (e) {
                 conectado = false;
                 dot.className = "status-dot bg-red-500";
-                text.textContent = "Sin conexión";
-                mostrarAlerta('error', 'Error de conexión: ' + e.message);
-                console.error("�?Error de conexión:", e);
+                text.textContent = "Sin conexi贸n";
+                mostrarAlerta('error', 'Error de conexi贸n: ' + e.message);
+                console.error("鉁?Error de conexi贸n:", e);
             }
         }
         
@@ -516,7 +516,7 @@
             } catch (e) {
                 conectado = false;
                 dot.className = "status-dot bg-red-500";
-                text.textContent = "Sin Conexión";
+                text.textContent = "Sin Conexi贸n";
             }
         }
         
@@ -557,16 +557,16 @@
             document.getElementById('new-hc').value = '';
             document.getElementById('new-name').value = '';
             renderizarTodo();
-            mostrarAlerta('success', 'Trámite agregado al catálogo');
+            mostrarAlerta('success', 'Tr谩mite agregado al cat谩logo');
         }
         
         function eliminarDelCatalogo(homoclave) {
-            if (!confirm('¿Eliminar este trámite del catálogo?')) return;
+            if (!confirm('驴Eliminar este tr谩mite del cat谩logo?')) return;
             let cat = obtenerCatalogo();
             cat = cat.filter(function(c) { return c.h !== homoclave; });
             guardarCatalogo(cat);
             renderizarTodo();
-            mostrarAlerta('success', 'Trámite eliminado del catálogo');
+            mostrarAlerta('success', 'Tr谩mite eliminado del cat谩logo');
         }
         
         function obtenerRegistros() {
@@ -584,11 +584,11 @@
             const tramite = document.getElementById('sel-tramite').value;
             
             if (!asunto || asunto.length < 10) {
-                mostrarAlerta('error', 'El asunto debe tener mínimo 10 caracteres');
+                mostrarAlerta('error', 'El asunto debe tener m铆nimo 10 caracteres');
                 return;
             }
             if (asunto.length > 500) {
-                mostrarAlerta('error', 'El asunto debe tener máximo 500 caracteres');
+                mostrarAlerta('error', 'El asunto debe tener m谩ximo 500 caracteres');
                 return;
             }
             
@@ -598,7 +598,7 @@
             const consecutivo = regsDelAnio.length + 1;
 			
 //Nota aqui se inserto la "/" de la determinante//
-            const determinante = 'DGO/'+ String(consecutivo).padStart(3, '0')'/26';
+            const determinante = 'DGO/' + String(consecutivo).padStart(3, '0') + '/26';
   //Nota aqui se inserto la "/" de la determinante//          
             const nuevoRegistro = {
                 determinante: determinante,
@@ -629,7 +629,7 @@
         
         async function sincronizarConNube() {
             if (!conectado) {
-                mostrarAlerta('error', 'No hay conexión con la base de datos');
+                mostrarAlerta('error', 'No hay conexi贸n con la base de datos');
                 return;
             }
             
@@ -674,9 +674,9 @@
                 
                 renderizarTodo();
                 mostrarAlerta('success', pend.length + ' registros sincronizados correctamente');
-                console.log("�?Sincronización exitosa");
+                console.log("鉁?Sincronizaci贸n exitosa");
             } catch (e) {
-                console.error("�?Error de sincronización:", e);
+                console.error("鉁?Error de sincronizaci贸n:", e);
                 mostrarAlerta('error', 'Error al sincronizar: ' + e.message);
             } finally {
                 mostrarCargando(false);
@@ -706,15 +706,15 @@
                         });
                     }
                 }
-                console.log("�?Catálogo sincronizado");
+                console.log("鉁?Cat谩logo sincronizado");
             } catch (error) {
-                console.error("�?Error al sincronizar catálogo:", error);
+                console.error("鉁?Error al sincronizar cat谩logo:", error);
             }
         }
         
         async function cargarDatosDesdeNube() {
             if (!conectado) {
-                console.log("�?Sin conexión, usando datos locales");
+                console.log("鈿?Sin conexi贸n, usando datos locales");
                 return;
             }
             
@@ -725,9 +725,9 @@
                 await cargarCatalogoDesdeNube();
                 renderizarTodo();
                 mostrarAlerta('success', 'Datos actualizados desde la nube');
-                console.log("�?Datos cargados desde la nube");
+                console.log("鉁?Datos cargados desde la nube");
             } catch (error) {
-                console.error("�?Error al cargar datos:", error);
+                console.error("鉁?Error al cargar datos:", error);
                 mostrarAlerta('warning', 'Error al cargar datos: ' + error.message);
             } finally {
                 mostrarCargando(false);
@@ -756,7 +756,7 @@
                 const combinados = nube.concat(locales);
                 guardarRegistros(combinados);
                 
-                console.log("�?Registros cargados:", combinados.length);
+                console.log("鉁?Registros cargados:", combinados.length);
                 return combinados.length;
             } catch (error) {
                 throw error;
@@ -781,12 +781,12 @@
                         };
                     });
                     guardarCatalogo(catalogo);
-                    console.log("�?Catálogo cargado:", catalogo.length, "trámites");
+                    console.log("鉁?Cat谩logo cargado:", catalogo.length, "tr谩mites");
                 }
                 
                 return data ? data.length : 0;
             } catch (error) {
-                console.error("�?Error al cargar catálogo:", error);
+                console.error("鉁?Error al cargar cat谩logo:", error);
                 throw error;
             }
         }
@@ -800,7 +800,7 @@
                 return;
             }
             
-            if (!confirm('¿Eliminar el registro ' + reg.determinante + '?')) return;
+            if (!confirm('驴Eliminar el registro ' + reg.determinante + '?')) return;
             
             regs.splice(idx, 1);
             guardarRegistros(regs);
@@ -840,7 +840,7 @@
                 '<p class="text-sm font-bold text-slate-800">' + (reg.homoclave || 'No especificado') + '</p>' +
                 '</div>' +
                 '<div class="p-4 bg-slate-50 rounded-lg">' +
-                '<p class="text-xs text-slate-500 font-bold mb-2"><i class="fas fa-hashtag mr-1"></i> BITÁCORA REFERENCIA</p>' +
+                '<p class="text-xs text-slate-500 font-bold mb-2"><i class="fas fa-hashtag mr-1"></i> BIT脕CORA REFERENCIA</p>' +
                 '<p class="text-sm text-slate-700">' + (reg.bitacora_referencia || 'No especificado') + '</p>' +
                 '</div>' +
                 '<div class="p-4 bg-slate-50 rounded-lg">' +
@@ -887,7 +887,7 @@
             const cat = obtenerCatalogo();
             const lista = document.getElementById('catalogo-list');
             if (cat.length === 0) {
-                lista.innerHTML = '<p class="text-xs text-slate-500 italic text-center py-2">Sin trámites</p>';
+                lista.innerHTML = '<p class="text-xs text-slate-500 italic text-center py-2">Sin tr谩mites</p>';
                 return;
             }
             lista.innerHTML = cat.map(function(c) {
@@ -906,7 +906,7 @@
             const cat = obtenerCatalogo();
             const sel = document.getElementById('sel-tramite');
             if (cat.length === 0) {
-                sel.innerHTML = '<option value="">-- Sin trámites --</option>';
+                sel.innerHTML = '<option value="">-- Sin tr谩mites --</option>';
             } else {
                 sel.innerHTML = '<option value="">-- Seleccione --</option>' + cat.map(function(c) {
                     return '<option value="' + c.h + '">' + c.h + ' - ' + c.n + '</option>';
@@ -996,7 +996,7 @@
                 return;
             }
             
-            let csv = 'Determinante,Consecutivo,Año,Área,Homoclave,Bitácora,Asunto,Fecha,Sincronizado\n';
+            let csv = 'Determinante,Consecutivo,A帽o,脕rea,Homoclave,Bit谩cora,Asunto,Fecha,Sincronizado\n';
             regs.forEach(function(r) {
                 csv += '"' + r.determinante + '",' + r.consecutivo + ',' + r.anio + ',"' + r.area_siglas + '","' + (r.homoclave || '') + '","' + (r.bitacora_referencia || '') + '","' + r.asunto.replace(/"/g, '""') + '","' + r.fecha + '",' + (r.sincronizado ? 'Si' : 'No') + '\n';
             });
@@ -1029,7 +1029,7 @@
             link.href = URL.createObjectURL(blob);
             link.download = 'Respaldo_' + AREA_SIGLAS + '_' + new Date().toISOString().split('T')[0] + '.json';
             
-            console.log("�?Respaldo automático generado:", new Date().toLocaleTimeString());
+            console.log("鉁?Respaldo autom谩tico generado:", new Date().toLocaleTimeString());
         }
         
         function imprimirTabla() {
@@ -1082,7 +1082,7 @@
                 '<div class="font-bold mb-1">' + tipo.toUpperCase() + '</div>' +
                 '<div class="text-sm">' + mensaje + '</div>' +
                 '</div>' +
-                '<button onclick="this.parentElement.remove()" class="text-white text-xl hover:bg-white hover:bg-opacity-20 p-1 rounded">×</button>';
+                '<button onclick="this.parentElement.remove()" class="text-white text-xl hover:bg-white hover:bg-opacity-20 p-1 rounded">脳</button>';
             document.body.appendChild(alerta);
             setTimeout(function() {
                 alerta.style.opacity = '0';
