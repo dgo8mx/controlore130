@@ -83,7 +83,20 @@
 
     </main>
 
-
+<!-- Contenedor para iframe -->
+<div id="iframeContainer" class="hidden fixed inset-0 bg-black bg-opacity-50 z-50">
+    <div class="container mx-auto px-6 py-4 h-full flex flex-col">
+        <div class="bg-white rounded-t-xl shadow-xl p-4 flex justify-between items-center">
+            <h3 class="text-xl font-bold text-slate-800" id="iframeTitle">
+                <i class="fas fa-folder-open text-emerald-600 mr-2"></i> Área cargada
+            </h3>
+            <button onclick="closeIframe()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-lg">
+                <i class="fas fa-times mr-2"></i> Cerrar y volver
+            </button>
+        </div>
+        <iframe id="areaFrame" class="w-full flex-1 bg-white rounded-b-xl shadow-xl"></iframe>
+    </div>
+</div>
 
         <!-- APARTADO: PROCEDIMIENTO INTERNO (ANTES DE GUÍA DE USO) -->
         <div class="bg-white rounded-2xl shadow-xl p-8 mb-8">
@@ -577,22 +590,29 @@
             });
         }
 
-        async function openArea(area) {
-            console.log('Abriendo área:', area.codigo);
-            
-            if (clienteSupabase) {
-                try {
-                    await clienteSupabase.from('auditoria_accesos').insert({
-                        username: sesionActual.username,
-                        tipo_evento: 'acceso_area',
-                        fecha_hora: new Date().toISOString(),
-                        exitoso: true,
-                        detalles: area.codigo
-                    });
-                } catch (e) {
-                    console.log('Auditoría no disponible');
-                }
-            }
+async function openArea(area) {
+    console.log('Abriendo área:', area.codigo);
+    
+    if (clienteSupabase) {
+        try {
+            await clienteSupabase.from('auditoria_accesos').insert({
+                username: sesionActual.username,
+                tipo_evento: 'acceso_area',
+                fecha_hora: new Date().toISOString(),
+                exitoso: true,
+                detalles: area.codigo
+            });
+        } catch (e) {
+            console.log('Auditoría no disponible');
+        }
+    }
+    
+    // Mostrar iframe con el área
+    document.getElementById('iframeTitle').innerHTML = 
+        `<i class="fas fa-folder-open text-emerald-600 mr-2"></i> ${area.codigo} - ${area.nombre}`;
+    document.getElementById('areaFrame').src = area.archivo;
+    document.getElementById('iframeContainer').classList.remove('hidden');
+}
             
             window.location.href = area.archivo;
         }
@@ -618,6 +638,12 @@
             }
         }, 5 * 60 * 1000);
 
+		
+		function closeIframe() {
+    document.getElementById('iframeContainer').classList.add('hidden');
+    document.getElementById('areaFrame').src = '';
+}
+		
         window.onload = async () => {
             console.log('Iniciando dashboard...');
             
@@ -648,6 +674,7 @@
 
 </body>
 </html>
+
 
 
 
