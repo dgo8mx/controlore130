@@ -598,10 +598,10 @@
             const consecutivo = regsDelAnio.length + 1;
 			
 //Nota aqui se inserto la "/" de la determinante//
-            const determinante = 'DGO/' + String(consecutivo).padStart(3, '0') + '/26';
+            const determinante1 = 'DGO/' + String(consecutivo).padStart(3, '0') + '/26';
   //Nota aqui se inserto la "/" de la determinante//          
             const nuevoRegistro = {
-                determinante: determinante,
+                determinante1: determinante1,
                 consecutivo: consecutivo,
                 anio: anio,
                 area_siglas: AREA_SIGLAS,
@@ -617,7 +617,7 @@
             guardarRegistros(regs);
             limpiarFormulario();
             renderizarTodo();
-            mostrarAlerta('success', 'Determinante generado: ' + determinante);
+            mostrarAlerta('success', 'Determinante generado: ' + determinante1);
         }
         
         function limpiarFormulario() {
@@ -647,7 +647,7 @@
             try {
                 const datos = pend.map(function(r) {
                     return {
-                        determinante: r.determinante,
+                        determinante1: r.determinante1,
                         consecutivo: r.consecutivo,
                         anio: r.anio,
                         area_siglas: r.area_siglas,
@@ -828,7 +828,7 @@
                 '<div class="grid grid-cols-2 gap-4">' +
                 '<div class="p-4 bg-emerald-50 rounded-lg">' +
                 '<p class="text-xs text-slate-500 font-bold mb-1">DETERMINANTE</p>' +
-                '<p class="text-lg font-bold text-emerald-700 font-mono">' + reg.determinante + '</p>' +
+                '<p class="text-lg font-bold text-emerald-700 font-mono">' + reg.determinante1 + '</p>' +
                 '</div>' +
                 '<div class="p-4 bg-blue-50 rounded-lg">' +
                 '<p class="text-xs text-slate-500 font-bold mb-1">ESTADO</p>' +
@@ -935,7 +935,7 @@
                 
                 let html = '<tr class="table-row-hover ' + rowClass + '">';
                 html += '<td class="p-4"><div class="space-y-1">';
-                html += '<p class="font-bold text-slate-900 font-mono text-sm">' + r.determinante + '</p>';
+                html += '<p class="font-bold text-slate-900 font-mono text-sm">' + r.determinante1 + '</p>';
                 html += '<p class="text-[10px] text-slate-500"><i class="fas fa-calendar-alt mr-1"></i>' + fecha + '</p>';
                 html += '<p class="text-xs font-bold text-purple-700 mt-1"><i class="fas fa-folder mr-1"></i>' + (r.homoclave || 'N/A') + '</p>';
                 html += '<p class="text-[10px] text-slate-600"><i class="fas fa-hashtag mr-1"></i>' + (r.bitacora_referencia || 'N/A') + '</p>';
@@ -996,9 +996,9 @@
                 return;
             }
             
-            let csv = 'Determinante,Consecutivo,A帽o,脕rea,Homoclave,Bit谩cora,Asunto,Fecha,Sincronizado\n';
+            let csv = 'Determinante1,Consecutivo,A帽o,脕rea,Homoclave,Bit谩cora,Asunto,Fecha,Sincronizado\n';
             regs.forEach(function(r) {
-                csv += '"' + r.determinante + '",' + r.consecutivo + ',' + r.anio + ',"' + r.area_siglas + '","' + (r.homoclave || '') + '","' + (r.bitacora_referencia || '') + '","' + r.asunto.replace(/"/g, '""') + '","' + r.fecha + '",' + (r.sincronizado ? 'Si' : 'No') + '\n';
+                csv += '"' + r.determinante1 + '",' + r.consecutivo + ',' + r.anio + ',"' + r.area_siglas + '","' + (r.homoclave || '') + '","' + (r.bitacora_referencia || '') + '","' + r.asunto.replace(/"/g, '""') + '","' + r.fecha + '",' + (r.sincronizado ? 'Si' : 'No') + '\n';
             });
             
             const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
