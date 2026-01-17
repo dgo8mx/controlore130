@@ -188,7 +188,7 @@
                 btn.innerHTML = '<i class="fas fa-check mr-2"></i> Acceso concedido';
                 
                 setTimeout(() => {
-                    window.location.href = usuario.tipo_usuario === 'admin' ? 'admin.html' : 'index.html';
+                    window.location.href = usuario.tipo_usuario === 'root' ? 'admin.html' : 'index.html';
                 }, 1000);
 
             } catch (error) {
@@ -207,7 +207,7 @@
                 if (sesionExistente) {
                     mostrarMensaje('Redirigiendo...', 'success');
                     setTimeout(() => {
-                        window.location.href = sesionExistente.tipo === 'admin' ? 'admin.html' : 'index.html';
+                        window.location.href = sesionExistente.tipo === 'root' ? 'admin.html' : 'index.html';
                     }, 500);
                     return;
                 }
