@@ -8,11 +8,8 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    
-    <!-- Google Drive API -->
-    <script src="https://apis.google.com/js/api.js"></script>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
     
     <style>
         .gradient-bg { background: linear-gradient(135deg, #13322B 0%, #1a4838 100%); }
@@ -20,326 +17,141 @@
         .pulse { animation: pulse 2s infinite; }
         @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.4; } }
         
-        .group:hover .opacity-0 {
-            opacity: 1 !important;
-        }
+        .group:hover .opacity-0 { opacity: 1 !important; }
         
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(10px); }
             to { opacity: 1; transform: translateY(0); }
         }
         
-        .animate-fadeIn {
-            animation: fadeIn 0.3s ease-out;
-        }
+        .animate-fadeIn { animation: fadeIn 0.3s ease-out; }
         
-        /* Etapas con línea de tiempo */
-        .timeline-container {
-            position: relative;
-            padding: 20px 0;
-        }
-        
-        .timeline-item {
-            position: relative;
-            padding-left: 40px;
-            margin-bottom: 20px;
-        }
-        
+        .timeline-container { position: relative; padding: 20px 0; }
+        .timeline-item { position: relative; padding-left: 40px; margin-bottom: 20px; }
         .timeline-dot {
-            position: absolute;
-            left: 0;
-            top: 8px;
-            width: 24px;
-            height: 24px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 12px;
-            font-weight: bold;
-            z-index: 2;
+            position: absolute; left: 0; top: 8px; width: 24px; height: 24px;
+            border-radius: 50%; display: flex; align-items: center;
+            justify-content: center; font-size: 12px; font-weight: bold; z-index: 2;
         }
-        
         .timeline-line {
-            position: absolute;
-            left: 11px;
-            top: 32px;
-            width: 2px;
-            height: calc(100% - 32px);
-            background: #e5e7eb;
+            position: absolute; left: 11px; top: 32px; width: 2px;
+            height: calc(100% - 32px); background: #e5e7eb;
         }
-        
         .timeline-item.active .timeline-dot {
-            background: #10b981;
-            color: white;
+            background: #10b981; color: white;
             box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.2);
         }
+        .timeline-item.completed .timeline-dot { background: #3b82f6; color: white; }
+        .timeline-item.blocked .timeline-dot { background: #ef4444; color: white; }
+        .timeline-item.pending .timeline-dot { background: #d1d5db; color: #6b7280; }
         
-        .timeline-item.completed .timeline-dot {
-            background: #3b82f6;
-            color: white;
-        }
-        
-        .timeline-item.blocked .timeline-dot {
-            background: #ef4444;
-            color: white;
-        }
-        
-        .timeline-item.pending .timeline-dot {
-            background: #d1d5db;
-            color: #6b7280;
-        }
-        
-        /* Estilos de documentos mejorados */
         .preview-container {
-            position: relative;
-            border: 2px dashed #cbd5e1;
-            border-radius: 8px;
-            padding: 20px;
-            background: #f8fafc;
-            transition: all 0.3s;
+            position: relative; border: 2px dashed #cbd5e1; border-radius: 8px;
+            padding: 20px; background: #f8fafc; transition: all 0.3s;
         }
-        .preview-container:hover {
-            border-color: #3b82f6;
-            background: #eff6ff;
-        }
+        .preview-container:hover { border-color: #3b82f6; background: #eff6ff; }
         .preview-item {
-            position: relative;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            overflow: hidden;
-            background: white;
+            position: relative; border: 2px solid #e5e7eb;
+            border-radius: 8px; overflow: hidden; background: white;
         }
-        .preview-image {
-            width: 100%;
-            height: 200px;
-            object-fit: cover;
-        }
+        .preview-image { width: 100%; height: 200px; object-fit: cover; }
         .preview-pdf {
-            width: 100%;
-            height: 200px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            background: #fee2e2;
+            width: 100%; height: 200px; display: flex;
+            align-items: center; justify-content: center; background: #fee2e2;
         }
         .remove-preview {
-            position: absolute;
-            top: 8px;
-            right: 8px;
-            background: rgba(239, 68, 68, 0.9);
-            color: white;
-            border-radius: 50%;
-            width: 28px;
-            height: 28px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            cursor: pointer;
-            transition: all 0.2s;
+            position: absolute; top: 8px; right: 8px;
+            background: rgba(239, 68, 68, 0.9); color: white;
+            border-radius: 50%; width: 28px; height: 28px;
+            display: flex; align-items: center; justify-content: center;
+            cursor: pointer; transition: all 0.2s;
         }
-        .remove-preview:hover {
-            background: #dc2626;
-            transform: scale(1.1);
-        }
+        .remove-preview:hover { background: #dc2626; transform: scale(1.1); }
         
-        /* Visor de documentos */
         .doc-viewer {
-            position: fixed;
-            inset: 0;
-            background: rgba(0, 0, 0, 0.95);
-            z-index: 9999;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            position: fixed; inset: 0; background: rgba(0, 0, 0, 0.95);
+            z-index: 9999; display: flex; align-items: center; justify-content: center;
         }
-        .doc-viewer-content {
-            max-width: 90vw;
-            max-height: 90vh;
-            position: relative;
-        }
-        .doc-viewer-image {
-            max-width: 100%;
-            max-height: 90vh;
-            object-fit: contain;
-            transition: transform 0.3s;
-        }
+        .doc-viewer-content { max-width: 90vw; max-height: 90vh; position: relative; }
+        .doc-viewer-image { max-width: 100%; max-height: 90vh; object-fit: contain; transition: transform 0.3s; }
         .doc-viewer-controls {
-            position: absolute;
-            bottom: 20px;
-            left: 50%;
-            transform: translateX(-50%);
-            background: rgba(0, 0, 0, 0.8);
-            padding: 15px 25px;
-            border-radius: 50px;
-            display: flex;
-            gap: 15px;
+            position: absolute; bottom: 20px; left: 50%; transform: translateX(-50%);
+            background: rgba(0, 0, 0, 0.8); padding: 15px 25px;
+            border-radius: 50px; display: flex; gap: 15px;
         }
         .doc-viewer-btn {
-            background: white;
-            color: black;
-            border: none;
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.2s;
+            background: white; color: black; border: none;
+            width: 40px; height: 40px; border-radius: 50%;
+            cursor: pointer; display: flex; align-items: center;
+            justify-content: center; transition: all 0.2s;
         }
-        .doc-viewer-btn:hover {
-            background: #3b82f6;
-            color: white;
-            transform: scale(1.1);
-        }
+        .doc-viewer-btn:hover { background: #3b82f6; color: white; transform: scale(1.1); }
         .doc-viewer-close {
-            position: absolute;
-            top: 20px;
-            right: 20px;
-            background: rgba(239, 68, 68, 0.9);
-            color: white;
-            border: none;
-            width: 50px;
-            height: 50px;
-            border-radius: 50%;
-            cursor: pointer;
-            font-size: 24px;
-            transition: all 0.2s;
+            position: absolute; top: 20px; right: 20px;
+            background: rgba(239, 68, 68, 0.9); color: white;
+            border: none; width: 50px; height: 50px; border-radius: 50%;
+            cursor: pointer; font-size: 24px; transition: all 0.2s;
         }
-        .doc-viewer-close:hover {
-            background: #dc2626;
-            transform: scale(1.1);
-        }
+        .doc-viewer-close:hover { background: #dc2626; transform: scale(1.1); }
         
-        /* Notificaciones toast */
         .toast-container {
-            position: fixed;
-            top: 20px;
-            right: 20px;
-            z-index: 10000;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
+            position: fixed; top: 20px; right: 20px; z-index: 10000;
+            display: flex; flex-direction: column; gap: 10px;
         }
-        
         .toast {
-            min-width: 300px;
-            padding: 16px 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            display: flex;
-            align-items: center;
-            gap: 12px;
-            animation: slideInRight 0.3s ease-out;
+            min-width: 300px; padding: 16px 20px; border-radius: 8px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.15); display: flex;
+            align-items: center; gap: 12px; animation: slideInRight 0.3s ease-out;
             background: white;
         }
-        
         @keyframes slideInRight {
             from { transform: translateX(400px); opacity: 0; }
             to { transform: translateX(0); opacity: 1; }
         }
-        
         @keyframes slideOutRight {
             from { transform: translateX(0); opacity: 1; }
             to { transform: translateX(400px); opacity: 0; }
         }
+        .toast.removing { animation: slideOutRight 0.3s ease-out forwards; }
+        .toast-success { border-left: 4px solid #10b981; }
+        .toast-error { border-left: 4px solid #ef4444; }
+        .toast-warning { border-left: 4px solid #f59e0b; }
+        .toast-info { border-left: 4px solid #3b82f6; }
+        .toast-icon { font-size: 24px; flex-shrink: 0; }
+        .toast-content { flex: 1; }
+        .toast-title { font-weight: bold; margin-bottom: 4px; }
+        .toast-message { font-size: 14px; color: #6b7280; }
+        .toast-close { cursor: pointer; color: #9ca3af; transition: color 0.2s; flex-shrink: 0; }
+        .toast-close:hover { color: #374151; }
         
-        .toast.removing {
-            animation: slideOutRight 0.3s ease-out forwards;
+        .nextcloud-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 4px 12px; background: #0082c9; color: white;
+            border-radius: 12px; font-size: 12px; font-weight: 600;
         }
         
-        .toast-success {
-            border-left: 4px solid #10b981;
-        }
-        
-        .toast-error {
-            border-left: 4px solid #ef4444;
-        }
-        
-        .toast-warning {
-            border-left: 4px solid #f59e0b;
-        }
-        
-        .toast-info {
-            border-left: 4px solid #3b82f6;
-        }
-        
-        .toast-icon {
-            font-size: 24px;
-            flex-shrink: 0;
-        }
-        
-        .toast-content {
-            flex: 1;
-        }
-        
-        .toast-title {
-            font-weight: bold;
-            margin-bottom: 4px;
-        }
-        
-        .toast-message {
-            font-size: 14px;
-            color: #6b7280;
-        }
-        
-        .toast-close {
-            cursor: pointer;
-            color: #9ca3af;
-            transition: color 0.2s;
-            flex-shrink: 0;
-        }
-        
-        .toast-close:hover {
-            color: #374151;
-        }
-        
-        /* Badge de Google Drive */
-        .drive-badge {
-            display: inline-flex;
-            align-items: center;
-            gap: 6px;
-            padding: 4px 12px;
-            background: #4285f4;
-            color: white;
-            border-radius: 12px;
-            font-size: 12px;
-            font-weight: 600;
-        }
-        
-        /* Historial de cambios */
         .history-item {
-            border-left: 3px solid #e5e7eb;
-            padding-left: 15px;
-            margin-bottom: 15px;
-            transition: all 0.2s;
+            border-left: 3px solid #e5e7eb; padding-left: 15px;
+            margin-bottom: 15px; transition: all 0.2s;
         }
-        
         .history-item:hover {
-            border-left-color: #3b82f6;
-            background: #f8fafc;
-            padding-left: 20px;
+            border-left-color: #3b82f6; background: #f8fafc; padding-left: 20px;
         }
         
-        /* Botones de control de etapa */
-        .stage-control-btn {
-            transition: all 0.2s;
-        }
-        
+        .stage-control-btn { transition: all 0.2s; }
         .stage-control-btn:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+            transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         }
+        .stage-control-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .stage-control-btn:disabled:hover { transform: none; box-shadow: none; }
         
-        .stage-control-btn:disabled {
-            opacity: 0.5;
-            cursor: not-allowed;
+        .upload-progress {
+            width: 100%; height: 4px; background: #e5e7eb;
+            border-radius: 2px; overflow: hidden; margin-top: 8px;
         }
-        
-        .stage-control-btn:disabled:hover {
-            transform: none;
-            box-shadow: none;
+        .upload-progress-bar {
+            height: 100%; background: linear-gradient(90deg, #0082c9, #0066a3);
+            transition: width 0.3s ease;
         }
     </style>
 </head>
@@ -379,24 +191,107 @@
         </div>
     </div>
 
+    <!-- Modal de Ayuda NextCloud -->
+    <div id="modalAyudaNC" class="fixed inset-0 bg-black bg-opacity-50 hidden items-center justify-center z-50" style="display: none;">
+        <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
+            <div class="bg-blue-600 p-6 rounded-t-xl">
+                <div class="flex items-center justify-between">
+                    <h2 class="text-2xl font-bold text-white flex items-center gap-2">
+                        <i class="fas fa-cloud"></i>
+                        Sincronizar con NextCloud SEMARNAT
+                    </h2>
+                    <button onclick="cerrarModalAyudaNC()" class="text-white hover:bg-white hover:bg-opacity-20 rounded-full p-2 transition">
+                        <i class="fas fa-times text-xl"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="p-6">
+                <div class="bg-yellow-50 border-l-4 border-yellow-500 p-4 mb-4">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <i class="fas fa-exclamation-triangle text-yellow-500"></i>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm text-yellow-700">
+                                <strong>Limitaci贸n t茅cnica:</strong> Por pol铆ticas de seguridad de NextCloud SEMARNAT, 
+                                no es posible sincronizar autom谩ticamente desde el navegador (CORS bloqueado).
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 class="font-bold text-lg mb-3">馃搵 C贸mo respaldar manualmente en NextCloud:</h3>
+                
+                <div class="space-y-4">
+                    <div class="bg-blue-50 p-4 rounded-lg">
+                        <p class="font-semibold text-blue-900 mb-2">
+                            <i class="fas fa-download mr-2"></i>Paso 1: Descargar documentos
+                        </p>
+                        <p class="text-sm text-blue-800">
+                            Usa el bot贸n "Descargar Todos" en cada determinante para obtener un ZIP con todos los documentos.
+                        </p>
+                    </div>
+
+                    <div class="bg-green-50 p-4 rounded-lg">
+                        <p class="font-semibold text-green-900 mb-2">
+                            <i class="fas fa-cloud-upload-alt mr-2"></i>Paso 2: Subir a NextCloud
+                        </p>
+                        <ol class="text-sm text-green-800 list-decimal list-inside space-y-1">
+                            <li>Abre: <a href="https://nextcloud.semarnat.gob.mx/nextcloud/" target="_blank" class="underline">nextcloud.semarnat.gob.mx</a></li>
+                            <li>Crea una carpeta llamada "OR-130-Determinantes"</li>
+                            <li>Dentro, crea subcarpetas por determinante</li>
+                            <li>Arrastra los archivos del ZIP a cada carpeta</li>
+                        </ol>
+                    </div>
+
+                    <div class="bg-purple-50 p-4 rounded-lg">
+                        <p class="font-semibold text-purple-900 mb-2">
+                            <i class="fas fa-info-circle mr-2"></i>Alternativa: App de escritorio
+                        </p>
+                        <p class="text-sm text-purple-800">
+                            Instala la app de NextCloud en tu computadora para sincronizaci贸n autom谩tica de carpetas.
+                            Descarga: <a href="https://nextcloud.com/install/#install-clients" target="_blank" class="underline">nextcloud.com/install</a>
+                        </p>
+                    </div>
+
+                    <div class="bg-gray-50 p-4 rounded-lg">
+                        <p class="font-semibold text-gray-900 mb-2">
+                            <i class="fas fa-server mr-2"></i>Para Administradores IT
+                        </p>
+                        <p class="text-sm text-gray-800">
+                            Para habilitar sincronizaci贸n autom谩tica, el administrador de NextCloud debe configurar CORS 
+                            en el servidor. Contacta al departamento de TI de SEMARNAT.
+                        </p>
+                    </div>
+                </div>
+
+                <div class="mt-6 flex justify-end">
+                    <button onclick="cerrarModalAyudaNC()" 
+                            class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
+                        Entendido
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Header -->
     <header class="gradient-bg shadow-lg">
         <div class="container mx-auto px-4 py-6">
-            <div class="flex items-center justify-between">
+            <div class="flex items-center justify-between flex-wrap gap-4">
                 <div class="flex items-center space-x-4">
-                                <div class="flex items-center gap-4">
-              -🌲🌲🌲-
+                    <img src="https://upload.wikimedia.org/wikipedia/commons/thumb/6/6c/SEMARNAT_logo_2012.svg/240px-SEMARNAT_logo_2012.svg.png" 
+                         alt="SEMARNAT" class="h-16">
                     <div>
-                        <h1 class="text-2xl font-bold text-white">Sistema de Gestión OR-130</h1>
-                        <p class="text-green-100">SEMARNAT Durango - Control de Determinantes v4.0</p>
+                        <h1 class="text-2xl font-bold text-white">Sistema de Gesti贸n OR-130</h1>
+                        <p class="text-green-100">SEMARNAT Durango - Control de Determinantes v4.2</p>
                     </div>
                 </div>
-                <div class="flex items-center space-x-4">
-                    <!-- Botón Google Drive -->
-                    <button id="driveConnectBtn" onclick="conectarDrive()" 
-                            class="bg-white text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-100 transition flex items-center gap-2">
-                        <i class="fab fa-google-drive text-blue-600"></i>
-                        <span id="driveStatus">Conectar Drive</span>
+                <div class="flex items-center space-x-3">
+                    <button id="btnAyudaNC" onclick="abrirModalAyudaNC()" 
+                            class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-2">
+                        <i class="fas fa-cloud"></i>
+                        <span>Sincronizar con NextCloud</span>
                     </button>
                     <button onclick="location.reload()" class="bg-white bg-opacity-20 text-white px-4 py-2 rounded-lg hover:bg-opacity-30 transition">
                         <i class="fas fa-sync-alt mr-2"></i>Actualizar
@@ -437,7 +332,7 @@
             <div class="bg-white rounded-xl shadow-md p-6 hover:shadow-lg transition">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-gray-500 text-sm font-medium">Etapa 3: Notificación</p>
+                        <p class="text-gray-500 text-sm font-medium">Etapa 3: Notificaci贸n</p>
                         <p id="notificacionesPendientes" class="text-3xl font-bold text-purple-600 mt-1">0</p>
                     </div>
                     <div class="bg-purple-100 p-3 rounded-full">
@@ -463,20 +358,20 @@
         <div class="bg-white rounded-xl shadow-md overflow-hidden">
             <div class="p-6 border-b border-gray-200">
                 <div class="flex flex-wrap items-center justify-between gap-4">
-                    <div class="flex items-center space-x-4">
+                    <div class="flex items-center space-x-4 flex-wrap gap-2">
                         <div class="relative">
-                            <input id="searchInput" type="text" placeholder="Buscar determinante, área..."
+                            <input id="searchInput" type="text" placeholder="Buscar determinante, 谩rea..."
                                    class="pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 focus:border-transparent w-64">
                             <i class="fas fa-search absolute left-3 top-3 text-gray-400"></i>
                         </div>
                         <select id="filterArea" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
-                            <option value="">Todas las Áreas</option>
+                            <option value="">Todas las 脕reas</option>
                         </select>
                         <select id="filterEtapa" class="px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500">
                             <option value="">Todas las Etapas</option>
                             <option value="1">Etapa 1: Captura</option>
                             <option value="2">Etapa 2: Firma</option>
-                            <option value="3">Etapa 3: Notificación</option>
+                            <option value="3">Etapa 3: Notificaci贸n</option>
                             <option value="4">Etapa 4: Expediente</option>
                         </select>
                     </div>
@@ -493,17 +388,17 @@
                     <thead class="bg-gray-50">
                         <tr>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Determinante</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Área</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">脕rea</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Etapa</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Estado</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Documentos</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Drive</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">NextCloud</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Fecha</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="tablaOficios" class="bg-white divide-y divide-gray-200">
-                        <!-- Se llena dinámicamente -->
+                        <!-- Se llena din谩micamente -->
                     </tbody>
                 </table>
             </div>
@@ -526,10 +421,10 @@
             </div>
 
             <div class="p-6">
-                <!-- Información General -->
+                <!-- Informaci贸n General -->
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-2">Área Responsable</label>
+                        <label class="block text-sm font-medium text-gray-700 mb-2">脕rea Responsable</label>
                         <p id="modalArea" class="text-lg font-semibold text-gray-900"></p>
                     </div>
                     <div>
@@ -549,16 +444,10 @@
                             <i class="fas fa-tasks mr-2 text-green-600"></i>
                             Control de Etapas del Workflow
                         </h3>
-                        <div id="driveInfo" class="hidden">
-                            <span class="drive-badge">
-                                <i class="fab fa-google-drive"></i>
-                                Respaldado en Drive
-                            </span>
-                        </div>
                     </div>
                     
                     <div id="timelineEtapas" class="timeline-container">
-                        <!-- Se llena dinámicamente -->
+                        <!-- Se llena din谩micamente -->
                     </div>
 
                     <!-- Botones de Control -->
@@ -586,11 +475,11 @@
                     </div>
                 </div>
 
-                <!-- Gestión de Documentos -->
+                <!-- Gesti贸n de Documentos -->
                 <div class="mb-6">
                     <h3 class="text-lg font-bold text-gray-900 mb-4">
                         <i class="fas fa-paperclip mr-2 text-blue-600"></i>
-                        Gestión de Documentos Digitalizados
+                        Gesti贸n de Documentos Digitalizados
                     </h3>
                     
                     <!-- Carga de Documentos -->
@@ -598,24 +487,29 @@
                         <label class="block text-sm font-medium text-gray-700 mb-2">
                             Cargar Nuevos Documentos (PDF, JPG, PNG)
                         </label>
-                        <div class="flex gap-3">
+                        <div class="flex gap-3 flex-wrap">
                             <input type="file" id="inputArchivos" multiple accept="image/*,application/pdf" 
                                    class="flex-1 border border-gray-300 rounded-lg p-2" onchange="previsualizarArchivos()">
                             <button onclick="subirDocumentos()" 
                                     class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition flex items-center gap-2">
                                 <i class="fas fa-cloud-upload-alt"></i>
-                                Subir a Sistema
+                                Subir Documentos
                             </button>
-                            <button id="btnSubirDrive" onclick="subirDocumentosDrive()" 
-                                    class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition flex items-center gap-2"
-                                    disabled>
-                                <i class="fab fa-google-drive"></i>
-                                Respaldar en Drive
+                            <button id="btnDescargarTodos" onclick="descargarTodosDocumentos()" 
+                                    class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 transition flex items-center gap-2">
+                                <i class="fas fa-download"></i>
+                                Descargar Todos (ZIP)
                             </button>
+                        </div>
+                        <div id="uploadProgress" class="hidden">
+                            <div class="upload-progress">
+                                <div id="uploadProgressBar" class="upload-progress-bar" style="width: 0%"></div>
+                            </div>
+                            <p id="uploadStatus" class="text-sm text-gray-600 mt-2"></p>
                         </div>
                     </div>
 
-                    <!-- Previsualización -->
+                    <!-- Previsualizaci贸n -->
                     <div id="previsualizacion" class="hidden mb-4">
                         <p class="text-sm font-medium text-gray-700 mb-2">Documentos a cargar:</p>
                         <div id="listaPreview" class="grid grid-cols-2 md:grid-cols-4 gap-4"></div>
@@ -623,7 +517,7 @@
 
                     <!-- Documentos Existentes -->
                     <div id="listaDocumentos">
-                        <!-- Se llena dinámicamente -->
+                        <!-- Se llena din谩micamente -->
                     </div>
                 </div>
 
@@ -636,26 +530,26 @@
                     <div class="space-y-3">
                         <textarea id="nuevaObservacion" rows="3" 
                                   class="w-full border border-gray-300 rounded-lg p-3 focus:ring-2 focus:ring-green-500"
-                                  placeholder="Agregar observación o comentario sobre esta determinante..."></textarea>
+                                  placeholder="Agregar observaci贸n o comentario sobre esta determinante..."></textarea>
                         <button onclick="agregarObservacion()" 
                                 class="bg-purple-600 text-white px-6 py-2 rounded-lg hover:bg-purple-700 transition">
                             <i class="fas fa-plus mr-2"></i>
-                            Agregar Observación
+                            Agregar Observaci贸n
                         </button>
                     </div>
                     <div id="listaObservaciones" class="mt-4 space-y-3">
-                        <!-- Se llena dinámicamente -->
+                        <!-- Se llena din谩micamente -->
                     </div>
                 </div>
 
-                <!-- Historial de Auditoría -->
+                <!-- Historial de Auditor铆a -->
                 <div>
                     <h3 class="text-lg font-bold text-gray-900 mb-4">
                         <i class="fas fa-clipboard-list mr-2 text-indigo-600"></i>
-                        Registro de Auditoría
+                        Registro de Auditor铆a
                     </h3>
                     <div id="listaAuditoria" class="space-y-2 max-h-60 overflow-y-auto">
-                        <!-- Se llena dinámicamente -->
+                        <!-- Se llena din谩micamente -->
                     </div>
                 </div>
             </div>
@@ -678,23 +572,17 @@
             </div>
             <div class="p-6">
                 <div id="contenidoHistorial" class="space-y-3">
-                    <!-- Se llena dinámicamente -->
+                    <!-- Se llena din谩micamente -->
                 </div>
             </div>
         </div>
     </div>
 
     <script>
-        // Configuración
+        // ====================== CONFIGURACI脫N ======================
         const SUPABASE_URL = 'https://rnwksmgwmnjatrgezaaa.supabase.co';
         const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJud2tzbWd3bW5qYXRyZ2V6YWFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc5MTY1MTYsImV4cCI6MjA4MzQ5MjUxNn0.vQXfHnWRuCNOjbqX-iYragObPA9GyCw9z9RMsNLjEfE';
         const db = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-
-        // Google Drive Configuration
-        const GOOGLE_CLIENT_ID = 'TU_GOOGLE_CLIENT_ID';
-        const GOOGLE_API_KEY = 'TU_GOOGLE_API_KEY';
-        const DISCOVERY_DOCS = ["https://www.googleapis.com/discovery/v1/apis/drive/v3/rest"];
-        const SCOPES = 'https://www.googleapis.com/auth/drive.file';
 
         // Variables globales
         let datosOriginales = [];
@@ -705,16 +593,12 @@
         let allDocsForViewer = [];
         let currentDocIndex = 0;
         let currentZoom = 1;
-        let gapiInited = false;
-        let gisInited = false;
-        let tokenClient;
-        let accessToken = null;
 
-        // Inicialización
+        // ====================== INICIALIZACI脫N ======================
+        
         document.addEventListener('DOMContentLoaded', () => {
             cargarDatos();
             setupEventListeners();
-            inicializarGoogleAPI();
         });
 
         function setupEventListeners() {
@@ -723,209 +607,133 @@
             document.getElementById('filterEtapa').addEventListener('change', filtrarDatos);
         }
 
-        // ====================== GOOGLE DRIVE API ======================
+        // ====================== NEXTCLOUD CONFIGURATION ======================
         
-        function inicializarGoogleAPI() {
-            gapi.load('client', initializeGapiClient);
-            google.accounts.id.initialize({
-                client_id: GOOGLE_CLIENT_ID,
-                callback: handleCredentialResponse
-            });
-            
-            tokenClient = google.accounts.oauth2.initTokenClient({
-                client_id: GOOGLE_CLIENT_ID,
-                scope: SCOPES,
-                callback: (response) => {
-                    if (response.access_token) {
-                        accessToken = response.access_token;
-                        actualizarEstadoDrive(true);
-                        showToast('Conectado a Google Drive exitosamente', 'success', 'Drive Conectado');
-                    }
-                },
-            });
+
+        // ====================== FUNCIONES DE AYUDA Y DESCARGA ======================
+        
+        function abrirModalAyudaNC() {
+            document.getElementById('modalAyudaNC').style.display = 'flex';
         }
 
-        async function initializeGapiClient() {
-            await gapi.client.init({
-                apiKey: GOOGLE_API_KEY,
-                discoveryDocs: DISCOVERY_DOCS,
-            });
-            gapiInited = true;
+        function cerrarModalAyudaNC() {
+            document.getElementById('modalAyudaNC').style.display = 'none';
         }
 
-        function handleCredentialResponse(response) {
-            // Manejar respuesta de credenciales
-        }
-
-        function conectarDrive() {
-            if (accessToken) {
-                showToast('Ya estás conectado a Google Drive', 'info', 'Drive');
-                return;
-            }
-            tokenClient.requestAccessToken();
-        }
-
-        function actualizarEstadoDrive(conectado) {
-            const btn = document.getElementById('driveConnectBtn');
-            const status = document.getElementById('driveStatus');
-            const btnSubirDrive = document.getElementById('btnSubirDrive');
-            
-            if (conectado) {
-                status.textContent = 'Drive Conectado';
-                btn.classList.add('bg-green-100', 'text-green-800');
-                btn.classList.remove('bg-white', 'text-gray-800');
-                if (btnSubirDrive) btnSubirDrive.disabled = false;
-            } else {
-                status.textContent = 'Conectar Drive';
-                btn.classList.remove('bg-green-100', 'text-green-800');
-                btn.classList.add('bg-white', 'text-gray-800');
-                if (btnSubirDrive) btnSubirDrive.disabled = true;
-            }
-        }
-
-        async function crearCarpetaDrive(nombreDeterminante) {
-            if (!accessToken) {
-                showToast('Debes conectar Google Drive primero', 'warning', 'Drive no conectado');
-                return null;
-            }
-
-            try {
-                const fileMetadata = {
-                    name: `OR-130_${nombreDeterminante}`,
-                    mimeType: 'application/vnd.google-apps.folder'
-                };
-
-                const response = await fetch('https://www.googleapis.com/drive/v3/files', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`,
-                        'Content-Type': 'application/json'
-                    },
-                    body: JSON.stringify(fileMetadata)
-                });
-
-                const folder = await response.json();
-                return folder.id;
-            } catch (error) {
-                console.error('Error creando carpeta:', error);
-                showToast('Error al crear carpeta en Drive', 'error', 'Error');
-                return null;
-            }
-        }
-
-        async function subirArchivoDrive(archivo, folderId) {
-            if (!accessToken) return null;
-
-            try {
-                const metadata = {
-                    name: archivo.nombre,
-                    parents: [folderId]
-                };
-
-                // Convertir base64 a blob
-                const base64Data = archivo.contenido.split(',')[1];
-                const byteCharacters = atob(base64Data);
-                const byteNumbers = new Array(byteCharacters.length);
-                for (let i = 0; i < byteCharacters.length; i++) {
-                    byteNumbers[i] = byteCharacters.charCodeAt(i);
-                }
-                const byteArray = new Uint8Array(byteNumbers);
-                const blob = new Blob([byteArray], { type: archivo.tipo });
-
-                const form = new FormData();
-                form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-                form.append('file', blob);
-
-                const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`
-                    },
-                    body: form
-                });
-
-                const file = await response.json();
-                return file.id;
-            } catch (error) {
-                console.error('Error subiendo archivo a Drive:', error);
-                return null;
-            }
-        }
-
-        async function subirDocumentosDrive() {
+        async function descargarTodosDocumentos() {
             if (!oficioActual) return;
             
-            if (!accessToken) {
-                showToast('Debes conectar Google Drive primero', 'warning', 'Drive no conectado');
-                conectarDrive();
-                return;
-            }
-
             const documentos = oficioActual.documentos || [];
             if (documentos.length === 0) {
-                showToast('No hay documentos para respaldar', 'warning', 'Sin documentos');
+                showToast('No hay documentos para descargar', 'warning', 'Sin documentos');
                 return;
             }
-
-            showToast(`Respaldando ${documentos.length} documento(s) en Drive...`, 'info', 'Procesando', 0);
-
+            
+            showToast(`Preparando descarga de ${documentos.length} documento(s)...`, 'info', 'Procesando');
+            
             try {
-                // Crear o obtener carpeta
-                let folderId = oficioActual.drive_folder_id;
-                if (!folderId) {
-                    folderId = await crearCarpetaDrive(oficioActual.determinante);
-                    if (!folderId) throw new Error('No se pudo crear la carpeta');
+                // Si solo hay un documento, descargarlo directamente
+                if (documentos.length === 1) {
+                    const doc = documentos[0];
+                    const link = document.createElement('a');
+                    link.href = doc.contenido;
+                    link.download = `${sanitizeFolderName(oficioActual.determinante)}_${doc.nombre}`;
+                    link.click();
                     
-                    // Guardar folder ID
-                    await db.from('registro_oficios')
-                        .update({ drive_folder_id: folderId })
-                        .eq('id', oficioActual.id);
+                    showToast('Documento descargado', 'success', 'Completado');
+                    return;
                 }
-
-                // Subir cada documento
-                let exitosos = 0;
-                for (const doc of documentos) {
-                    if (!doc.drive_file_id) {
-                        const fileId = await subirArchivoDrive(doc, folderId);
-                        if (fileId) {
-                            doc.drive_file_id = fileId;
-                            exitosos++;
-                        }
-                    }
-                }
-
-                // Actualizar base de datos
-                await db.from('registro_oficios')
-                    .update({ 
-                        documentos: documentos,
-                        drive_folder_id: folderId,
-                        drive_synced: true
-                    })
-                    .eq('id', oficioActual.id);
-
-                document.getElementById('toastContainer').innerHTML = '';
-                showToast(`${exitosos} documento(s) respaldados en Drive exitosamente`, 'success', 'Respaldo Completo');
                 
-                // Actualizar UI
-                document.getElementById('driveInfo').classList.remove('hidden');
-                await registrarAuditoria('drive_backup', `${exitosos} documentos respaldados en Google Drive`);
-                cargarDatos();
-                abrirModal(oficioActual);
-
+                // Si hay m煤ltiples documentos, crear un ZIP
+                // Usamos la librer铆a JSZip que cargaremos din谩micamente
+                if (typeof JSZip === 'undefined') {
+                    // Cargar JSZip din谩micamente
+                    const script = document.createElement('script');
+                    script.src = 'https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+                    script.onload = () => {
+                        crearYDescargarZIP(documentos);
+                    };
+                    script.onerror = () => {
+                        // Si falla, descargar uno por uno
+                        descargarDocumentosIndividualmente(documentos);
+                    };
+                    document.head.appendChild(script);
+                } else {
+                    crearYDescargarZIP(documentos);
+                }
+                
             } catch (error) {
-                document.getElementById('toastContainer').innerHTML = '';
-                showToast(error.message, 'error', 'Error en Drive');
+                console.error('Error en descarga:', error);
+                showToast('Error al preparar descarga', 'error', 'Error');
             }
         }
 
-        async function abrirEnDrive() {
-            if (!oficioActual || !oficioActual.drive_folder_id) {
-                showToast('Esta determinante no tiene carpeta en Drive', 'warning', 'Sin carpeta');
-                return;
+        async function crearYDescargarZIP(documentos) {
+            try {
+                const zip = new JSZip();
+                const carpetaNombre = sanitizeFolderName(oficioActual.determinante);
+                
+                // Agregar cada documento al ZIP
+                for (let i = 0; i < documentos.length; i++) {
+                    const doc = documentos[i];
+                    
+                    // Convertir base64 a blob
+                    const base64Data = doc.contenido.split(',')[1];
+                    const byteCharacters = atob(base64Data);
+                    const byteNumbers = new Array(byteCharacters.length);
+                    for (let j = 0; j < byteCharacters.length; j++) {
+                        byteNumbers[j] = byteCharacters.charCodeAt(j);
+                    }
+                    const byteArray = new Uint8Array(byteNumbers);
+                    
+                    // Agregar al ZIP
+                    zip.file(doc.nombre, byteArray);
+                }
+                
+                // Generar el ZIP
+                const content = await zip.generateAsync({type: 'blob'});
+                
+                // Descargar
+                const link = document.createElement('a');
+                link.href = URL.createObjectURL(content);
+                link.download = `${carpetaNombre}_documentos.zip`;
+                link.click();
+                
+                showToast(`${documentos.length} documento(s) descargados en ZIP`, 'success', 'Completado');
+                
+                await registrarAuditoria('descargar_documentos', `Descarg贸 ${documentos.length} documentos en ZIP`);
+                
+            } catch (error) {
+                console.error('Error creando ZIP:', error);
+                // Si falla, descargar uno por uno
+                descargarDocumentosIndividualmente(documentos);
             }
+        }
 
-            const url = `https://drive.google.com/drive/folders/${oficioActual.drive_folder_id}`;
-            window.open(url, '_blank');
+        function descargarDocumentosIndividualmente(documentos) {
+            showToast('Descargando documentos uno por uno...', 'info', 'Procesando');
+            
+            documentos.forEach((doc, index) => {
+                setTimeout(() => {
+                    const link = document.createElement('a');
+                    link.href = doc.contenido;
+                    link.download = `${sanitizeFolderName(oficioActual.determinante)}_${doc.nombre}`;
+                    link.click();
+                    
+                    if (index === documentos.length - 1) {
+                        showToast(`${documentos.length} documento(s) descargados`, 'success', 'Completado');
+                    }
+                }, index * 500); // Esperar 500ms entre cada descarga
+            });
+        }
+
+
+        function sanitizeFolderName(name) {
+            return name.replace(/[^a-zA-Z0-9-_]/g, '_');
+        }
+
+        function sanitizeFileName(name) {
+            return name.replace(/[^a-zA-Z0-9.-_]/g, '_');
         }
 
         // ====================== CARGA DE DATOS ======================
@@ -953,7 +761,7 @@
         function cargarFiltroAreas() {
             const areas = [...new Set(datosOriginales.map(o => o.area_siglas))];
             const select = document.getElementById('filterArea');
-            select.innerHTML = '<option value="">Todas las Áreas</option>';
+            select.innerHTML = '<option value="">Todas las 脕reas</option>';
             areas.forEach(area => {
                 select.innerHTML += `<option value="${area}">${area}</option>`;
             });
@@ -967,7 +775,7 @@
             datosFiltrados = datosOriginales.filter(o => {
                 const matchSearch = !search || 
                     o.determinante.toLowerCase().includes(search) ||
-                    o.asunto.toLowerCase().includes(search) ||
+                    (o.asunto && o.asunto.toLowerCase().includes(search)) ||
                     o.area_siglas.toLowerCase().includes(search);
                 
                 const matchArea = !area || o.area_siglas === area;
@@ -987,7 +795,7 @@
             datosFiltrados.forEach(oficio => {
                 const etapa = getEtapaInfo(oficio.estado_workflow);
                 const numDocs = (oficio.documentos || []).length;
-                const hasDrive = oficio.drive_synced ? '<i class="fab fa-google-drive text-blue-600"></i>' : '-';
+                const hasNC = oficio.drive_synced ? '<i class="fas fa-cloud text-blue-600"></i>' : '-';
                 
                 tbody.innerHTML += `
                     <tr class="hover:bg-gray-50 transition cursor-pointer" onclick="abrirModal(${JSON.stringify(oficio).replace(/"/g, '&quot;')})">
@@ -1014,7 +822,7 @@
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-center">
-                            ${hasDrive}
+                            ${hasNC}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                             ${formatDate(oficio.fecha)}
@@ -1056,12 +864,6 @@
             renderizarAuditoria();
             actualizarBotonesControl();
             
-            if (oficio.drive_synced) {
-                document.getElementById('driveInfo').classList.remove('hidden');
-            } else {
-                document.getElementById('driveInfo').classList.add('hidden');
-            }
-            
             document.getElementById('modalOficio').style.display = 'flex';
         }
 
@@ -1080,10 +882,10 @@
             const bloqueado = oficioActual.etapa_bloqueada || false;
             
             const etapas = [
-                { num: 1, nombre: 'Etapa 1: Captura', descripcion: 'Información capturada por el área' },
+                { num: 1, nombre: 'Etapa 1: Captura', descripcion: 'Informaci贸n capturada por el 谩rea' },
                 { num: 2, nombre: 'Etapa 2: Firma del Titular', descripcion: 'Esperando firma del titular' },
-                { num: 3, nombre: 'Etapa 3: Notificación', descripcion: 'Proceso de notificación' },
-                { num: 4, nombre: 'Etapa 4: Expediente', descripcion: 'Integración en expediente' }
+                { num: 3, nombre: 'Etapa 3: Notificaci贸n', descripcion: 'Proceso de notificaci贸n' },
+                { num: 4, nombre: 'Etapa 4: Expediente', descripcion: 'Integraci贸n en expediente' }
             ];
 
             let html = '';
@@ -1131,13 +933,8 @@
             const btnBloquear = document.getElementById('btnBloquearEtapa');
             const textBloqueo = document.getElementById('textBloqueo');
             
-            // Avanzar: habilitado si no está bloqueado y no es la última etapa
             btnAvanzar.disabled = bloqueado || etapaActual >= 4;
-            
-            // Retroceder: habilitado si no está bloqueado y no es la primera etapa
             btnRetroceder.disabled = bloqueado || etapaActual <= 1;
-            
-            // Bloquear: siempre habilitado
             btnBloquear.disabled = false;
             textBloqueo.textContent = bloqueado ? 'Desbloquear Etapa' : 'Bloquear Etapa';
             
@@ -1158,24 +955,23 @@
             const etapaActual = oficioActual.estado_workflow || 1;
             
             if (etapaActual >= 4) {
-                showToast('Ya se encuentra en la última etapa', 'warning', 'No disponible');
+                showToast('Ya se encuentra en la 煤ltima etapa', 'warning', 'No disponible');
                 return;
             }
             
             if (oficioActual.etapa_bloqueada) {
-                showToast('La etapa está bloqueada. Desbloquéala primero', 'warning', 'Etapa bloqueada');
+                showToast('La etapa est谩 bloqueada. Desbloqu茅ala primero', 'warning', 'Etapa bloqueada');
                 return;
             }
             
             const nuevaEtapa = etapaActual + 1;
-            const confirmacion = confirm(`¿Avanzar a ${getEtapaInfo(nuevaEtapa).nombre}?`);
+            const confirmacion = confirm(`驴Avanzar a ${getEtapaInfo(nuevaEtapa).nombre}?`);
             
             if (!confirmacion) return;
             
             try {
                 showToast('Avanzando etapa...', 'info', 'Procesando', 0);
                 
-                // Actualizar etapa
                 const { error } = await db
                     .from('registro_oficios')
                     .update({ estado_workflow: nuevaEtapa })
@@ -1183,9 +979,8 @@
                 
                 if (error) throw error;
                 
-                // Registrar en historial
                 await registrarCambioEtapa(etapaActual, nuevaEtapa, 'avance');
-                await registrarAuditoria('cambio_etapa', `Avanzó de Etapa ${etapaActual} a Etapa ${nuevaEtapa}`);
+                await registrarAuditoria('cambio_etapa', `Avanz贸 de Etapa ${etapaActual} a Etapa ${nuevaEtapa}`);
                 
                 document.getElementById('toastContainer').innerHTML = '';
                 showToast(`Avanzado a ${getEtapaInfo(nuevaEtapa).nombre}`, 'success', 'Etapa actualizada');
@@ -1212,12 +1007,12 @@
             }
             
             if (oficioActual.etapa_bloqueada) {
-                showToast('La etapa está bloqueada. Desbloquéala primero', 'warning', 'Etapa bloqueada');
+                showToast('La etapa est谩 bloqueada. Desbloqu茅ala primero', 'warning', 'Etapa bloqueada');
                 return;
             }
             
             const nuevaEtapa = etapaActual - 1;
-            const motivo = prompt(`¿Motivo para retroceder a ${getEtapaInfo(nuevaEtapa).nombre}?`);
+            const motivo = prompt(`驴Motivo para retroceder a ${getEtapaInfo(nuevaEtapa).nombre}?`);
             
             if (!motivo || motivo.trim() === '') {
                 showToast('Debes proporcionar un motivo', 'warning', 'Motivo requerido');
@@ -1235,7 +1030,7 @@
                 if (error) throw error;
                 
                 await registrarCambioEtapa(etapaActual, nuevaEtapa, 'retroceso', motivo);
-                await registrarAuditoria('retroceso_etapa', `Retrocedió de Etapa ${etapaActual} a Etapa ${nuevaEtapa}. Motivo: ${motivo}`);
+                await registrarAuditoria('retroceso_etapa', `Retrocedi贸 de Etapa ${etapaActual} a Etapa ${nuevaEtapa}. Motivo: ${motivo}`);
                 
                 document.getElementById('toastContainer').innerHTML = '';
                 showToast(`Retrocedido a ${getEtapaInfo(nuevaEtapa).nombre}`, 'success', 'Etapa actualizada');
@@ -1256,7 +1051,7 @@
             
             const bloqueado = !oficioActual.etapa_bloqueada;
             const accion = bloqueado ? 'bloquear' : 'desbloquear';
-            const motivo = prompt(`¿Motivo para ${accion} la etapa actual?`);
+            const motivo = prompt(`驴Motivo para ${accion} la etapa actual?`);
             
             if (!motivo || motivo.trim() === '') {
                 showToast('Debes proporcionar un motivo', 'warning', 'Motivo requerido');
@@ -1275,7 +1070,7 @@
                 
                 await registrarAuditoria(
                     bloqueado ? 'bloqueo_etapa' : 'desbloqueo_etapa',
-                    `${bloqueado ? 'Bloqueó' : 'Desbloqueó'} la Etapa ${oficioActual.estado_workflow}. Motivo: ${motivo}`
+                    `${bloqueado ? 'Bloque贸' : 'Desbloque贸'} la Etapa ${oficioActual.estado_workflow}. Motivo: ${motivo}`
                 );
                 
                 document.getElementById('toastContainer').innerHTML = '';
@@ -1301,7 +1096,7 @@
                     etapa_nueva: etapaNueva,
                     tipo: tipo,
                     motivo: motivo,
-                    usuario: 'Sistema' // Aquí puedes poner el usuario actual si tienes auth
+                    usuario: 'Sistema'
                 });
                 
                 await db.from('registro_oficios')
@@ -1323,7 +1118,7 @@
             }
             
             let html = '';
-            historial.reverse().forEach(cambio => {
+            historial.slice().reverse().forEach(cambio => {
                 const fecha = new Date(cambio.fecha).toLocaleString('es-MX');
                 const icono = cambio.tipo === 'avance' ? 'arrow-right' : 'arrow-left';
                 const color = cambio.tipo === 'avance' ? 'text-green-600' : 'text-orange-600';
@@ -1335,14 +1130,14 @@
                             <div class="flex-1">
                                 <div class="flex items-center gap-2 mb-1">
                                     <span class="font-semibold text-gray-900">
-                                        ${getEtapaInfo(cambio.etapa_anterior).nombre} → ${getEtapaInfo(cambio.etapa_nueva).nombre}
+                                        ${getEtapaInfo(cambio.etapa_anterior).nombre} 鈫?${getEtapaInfo(cambio.etapa_nueva).nombre}
                                     </span>
                                     <span class="px-2 py-1 bg-gray-100 text-gray-700 text-xs rounded">${cambio.tipo}</span>
                                 </div>
                                 <p class="text-sm text-gray-600 mb-1">${cambio.motivo || 'Sin motivo especificado'}</p>
                                 <p class="text-xs text-gray-500">
                                     <i class="far fa-clock mr-1"></i>${fecha}
-                                    ${cambio.usuario ? ` • ${cambio.usuario}` : ''}
+                                    ${cambio.usuario ? ` 鈥?${cambio.usuario}` : ''}
                                 </p>
                             </div>
                         </div>
@@ -1378,7 +1173,7 @@
             let html = '<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">';
             docs.forEach((doc, index) => {
                 const isPDF = doc.tipo === 'application/pdf';
-                const hasDrive = doc.drive_file_id ? '<i class="fab fa-google-drive text-blue-600 ml-2"></i>' : '';
+                const hasNC = doc.nextcloud_synced ? '<i class="fas fa-cloud text-blue-600 ml-2" title="Respaldado en NextCloud"></i>' : '';
                 
                 html += `
                     <div class="preview-item group">
@@ -1392,9 +1187,9 @@
                             <div class="flex items-start justify-between mb-2">
                                 <div class="flex-1 min-w-0">
                                     <p class="text-sm font-medium text-gray-900 truncate" title="${doc.nombre}">
-                                        ${doc.nombre}${hasDrive}
+                                        ${doc.nombre}${hasNC}
                                     </p>
-                                    <p class="text-xs text-gray-500">${formatBytes(doc.tamaño)}</p>
+                                    <p class="text-xs text-gray-500">${formatBytes(doc.tama帽o)}</p>
                                 </div>
                             </div>
                             <div class="flex gap-2">
@@ -1419,11 +1214,17 @@
             
             if (docs.length > 1) {
                 html += `
-                    <div class="mt-4 flex justify-between items-center">
+                    <div class="mt-4 flex justify-between items-center flex-wrap gap-3">
                         <button onclick="verDocumentos(oficioActual.documentos)" 
                                 class="text-blue-600 hover:text-blue-800 text-sm font-medium">
-                            <i class="fas fa-images mr-1"></i>Ver todos en galería
+                            <i class="fas fa-images mr-1"></i>Ver todos en galer铆a
                         </button>
+                        ${oficioActual.drive_folder_id ? `
+                        <button onclick="abrirEnNextCloud()" 
+                                class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+                            <i class="fas fa-external-link-alt mr-1"></i>Abrir en NextCloud
+                        </button>
+                        ` : ''}
                         <button onclick="eliminarTodosDocumentos()" 
                                 class="text-red-600 hover:text-red-800 text-sm font-medium">
                             <i class="fas fa-trash-alt mr-1"></i>Eliminar todos (${docs.length})
@@ -1458,7 +1259,7 @@
                     archivosPreview.push({
                         nombre: file.name,
                         tipo: file.type,
-                        tamaño: file.size,
+                        tama帽o: file.size,
                         contenido: e.target.result
                     });
                     
@@ -1525,7 +1326,7 @@
                 document.getElementById('toastContainer').innerHTML = '';
                 showToast(`${archivosPreview.length} documento(s) subidos exitosamente`, 'success', 'Completado');
                 
-                await registrarAuditoria('subir_documentos', `Subió ${archivosPreview.length} documento(s)`);
+                await registrarAuditoria('subir_documentos', `Subi贸 ${archivosPreview.length} documento(s)`);
                 
                 archivosPendientes = [];
                 archivosPreview = [];
@@ -1544,7 +1345,7 @@
         async function eliminarDocumento(index) {
             const doc = oficioActual.documentos[index];
             
-            if (!confirm(`¿Eliminar el documento "${doc.nombre}"?\n\nEsta acción no se puede deshacer.`)) {
+            if (!confirm(`驴Eliminar el documento "${doc.nombre}"?\n\nEsta acci贸n no se puede deshacer.`)) {
                 return;
             }
             
@@ -1565,7 +1366,7 @@
                 document.getElementById('toastContainer').innerHTML = '';
                 showToast(`Documento "${doc.nombre}" eliminado`, 'success', 'Eliminado');
                 
-                await registrarAuditoria('eliminar_documento', `Eliminó el documento "${doc.nombre}"`);
+                await registrarAuditoria('eliminar_documento', `Elimin贸 el documento "${doc.nombre}"`);
                 
                 renderizarDocumentos();
                 cargarDatos();
@@ -1579,11 +1380,11 @@
         async function eliminarTodosDocumentos() {
             const total = oficioActual.documentos.length;
             
-            if (!confirm(`⚠️ ¿ELIMINAR TODOS LOS DOCUMENTOS?\n\nSe eliminarán ${total} documento(s).\n\nEsta acción NO se puede deshacer.`)) {
+            if (!confirm(`鈿狅笍 驴ELIMINAR TODOS LOS DOCUMENTOS?\n\nSe eliminar谩n ${total} documento(s).\n\nEsta acci贸n NO se puede deshacer.`)) {
                 return;
             }
             
-            if (!confirm(`🚨 CONFIRMA NUEVAMENTE\n\n¿Realmente deseas eliminar los ${total} documentos?\n\nÚltima oportunidad para cancelar.`)) {
+            if (!confirm(`馃毃 CONFIRMA NUEVAMENTE\n\n驴Realmente deseas eliminar los ${total} documentos?\n\n脷ltima oportunidad para cancelar.`)) {
                 return;
             }
             
@@ -1602,7 +1403,7 @@
                 document.getElementById('toastContainer').innerHTML = '';
                 showToast(`${total} documento(s) eliminados`, 'success', 'Completado');
                 
-                await registrarAuditoria('eliminar_todos_documentos', `Eliminó todos los documentos (${total})`);
+                await registrarAuditoria('eliminar_todos_documentos', `Elimin贸 todos los documentos (${total})`);
                 
                 renderizarDocumentos();
                 cargarDatos();
@@ -1706,7 +1507,7 @@
             }
             
             let html = '';
-            observaciones.reverse().forEach((obs, index) => {
+            observaciones.slice().reverse().forEach((obs, index) => {
                 const fecha = new Date(obs.fecha).toLocaleString('es-MX');
                 html += `
                     <div class="bg-purple-50 border border-purple-200 rounded-lg p-4">
@@ -1730,7 +1531,7 @@
             const texto = textarea.value.trim();
             
             if (!texto) {
-                showToast('Escribe una observación primero', 'warning', 'Campo vacío');
+                showToast('Escribe una observaci贸n primero', 'warning', 'Campo vac铆o');
                 return;
             }
             
@@ -1739,7 +1540,7 @@
                 observaciones.push({
                     fecha: new Date().toISOString(),
                     texto: texto,
-                    usuario: 'Sistema' // Aquí puedes poner el usuario actual
+                    usuario: 'Sistema'
                 });
                 
                 const { error } = await db
@@ -1752,8 +1553,8 @@
                 oficioActual.observaciones = observaciones;
                 textarea.value = '';
                 
-                showToast('Observación agregada', 'success', 'Guardado');
-                await registrarAuditoria('agregar_observacion', `Agregó una observación`);
+                showToast('Observaci贸n agregada', 'success', 'Guardado');
+                await registrarAuditoria('agregar_observacion', `Agreg贸 una observaci贸n`);
                 
                 renderizarObservaciones();
                 
@@ -1762,7 +1563,7 @@
             }
         }
 
-        // ====================== AUDITORÍA ======================
+        // ====================== AUDITOR脥A ======================
 
         function renderizarAuditoria() {
             const container = document.getElementById('listaAuditoria');
@@ -1772,14 +1573,14 @@
                 container.innerHTML = `
                     <div class="text-center py-4 bg-gray-50 rounded-lg border border-gray-200">
                         <i class="fas fa-clipboard-list text-gray-400 text-2xl mb-2"></i>
-                        <p class="text-sm text-gray-500">No hay registros de auditoría</p>
+                        <p class="text-sm text-gray-500">No hay registros de auditor铆a</p>
                     </div>
                 `;
                 return;
             }
             
             let html = '';
-            auditoria.reverse().slice(0, 20).forEach(registro => {
+            auditoria.slice().reverse().slice(0, 20).forEach(registro => {
                 const fecha = new Date(registro.fecha).toLocaleString('es-MX');
                 const icono = getIconoAccion(registro.accion);
                 
@@ -1813,7 +1614,7 @@
                 
                 oficioActual.auditoria = auditoria;
             } catch (e) {
-                console.error('Error en auditoría:', e);
+                console.error('Error en auditor铆a:', e);
             }
         }
 
@@ -1827,7 +1628,7 @@
                 'eliminar_documento': 'trash',
                 'eliminar_todos_documentos': 'trash-alt',
                 'agregar_observacion': 'comment',
-                'drive_backup': 'cloud-upload-alt'
+                'nextcloud_backup': 'cloud-upload-alt'
             };
             return iconos[accion] || 'circle';
         }
@@ -1838,7 +1639,7 @@
             const etapas = {
                 1: { nombre: 'Etapa 1: Captura', color: 'bg-gray-100 text-gray-800' },
                 2: { nombre: 'Etapa 2: Firma', color: 'bg-orange-100 text-orange-800' },
-                3: { nombre: 'Etapa 3: Notificación', color: 'bg-purple-100 text-purple-800' },
+                3: { nombre: 'Etapa 3: Notificaci贸n', color: 'bg-purple-100 text-purple-800' },
                 4: { nombre: 'Etapa 4: Expediente', color: 'bg-green-100 text-green-800' }
             };
             return etapas[etapa] || etapas[1];
@@ -1885,7 +1686,7 @@
             if (minutes < 1) return 'Justo ahora';
             if (minutes < 60) return `Hace ${minutes} min`;
             if (hours < 24) return `Hace ${hours} hora${hours > 1 ? 's' : ''}`;
-            if (days < 7) return `Hace ${days} día${days > 1 ? 's' : ''}`;
+            if (days < 7) return `Hace ${days} d铆a${days > 1 ? 's' : ''}`;
             
             return date.toLocaleDateString('es-MX', { 
                 day: '2-digit', 
@@ -1897,11 +1698,11 @@
         function exportarExcel() {
             const dataExcel = datosFiltrados.map(r => ({
                 'Determinante': r.determinante,
-                'Área': r.area_siglas,
+                '脕rea': r.area_siglas,
                 'Etapa': r.estado_workflow,
                 'Estado': r.etapa_bloqueada ? 'Bloqueada' : 'Activa',
                 'Documentos': (r.documentos || []).length,
-                'Drive': r.drive_synced ? 'Sí' : 'No',
+                'NextCloud': r.drive_synced ? 'S铆' : 'No',
                 'Fecha': new Date(r.fecha).toLocaleDateString('es-MX'),
                 'Asunto': r.asunto
             }));
@@ -1920,10 +1721,10 @@
             toast.className = `toast toast-${type}`;
             
             const icons = {
-                success: '✓',
-                error: '✕',
-                warning: '⚠',
-                info: 'ℹ'
+                success: '鉁?,
+                error: '鉁?,
+                warning: '鈿?,
+                info: '鈩?
             };
             
             const colors = {
@@ -1939,7 +1740,7 @@
                     ${title ? `<div class="toast-title">${title}</div>` : ''}
                     <div class="toast-message">${message}</div>
                 </div>
-                <div class="toast-close" onclick="this.parentElement.remove()">✕</div>
+                <div class="toast-close" onclick="this.parentElement.remove()">鉁?/div>
             `;
             
             container.appendChild(toast);
