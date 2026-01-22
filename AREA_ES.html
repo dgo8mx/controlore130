@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Control Centro de AtenciÃ³n Regional El Salto - SEMARNAT Durango</title>
+    <title>Control Centro de Atención Regional El Salto - SEMARNAT Durango</title>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
@@ -113,7 +113,7 @@
                 <div class="flex items-center gap-4">
                     -ðŸŒ²-
                     <div>
-                        <h1 class="text-xl font-bold tracking-tight">Centro de AtenciÃ³n Regional El Salto</h1>
+                        <h1 class="text-xl font-bold tracking-tight">Centro de Atención Regional El Salto</h1>
                         <p class="text-xs text-emerald-200">Control de Determinantes 2026</p>
                         <div class="flex items-center gap-2 mt-1">
                             <span id="dot" class="status-dot bg-gray-400"></span>
@@ -192,7 +192,7 @@
             <div class="stat-card" style="border-left-color: #06b6d4;">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-xs text-slate-500 font-semibold uppercase">TrÃ¡mites</p>
+                        <p class="text-xs text-slate-500 font-semibold uppercase">Trámites</p>
                         <h3 id="stat-tramites" class="text-2xl font-bold text-slate-800">0</h3>
                     </div>
                     <div class="bg-cyan-100 p-3 rounded-lg">
@@ -222,7 +222,7 @@
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">
-                                <i class="fas fa-folder text-emerald-600 mr-1"></i> TrÃ¡mite
+                                <i class="fas fa-folder text-emerald-600 mr-1"></i> Trámite
                             </label>
                             <select id="sel-tramite" class="input-modern w-full p-3 rounded-lg text-sm font-medium">
                                 <option value="">-- Seleccione --</option>
@@ -230,7 +230,7 @@
                         </div>
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">
-                                <i class="fas fa-hashtag text-emerald-600 mr-1"></i> BitÃ¡cora Referencia
+                                <i class="fas fa-hashtag text-emerald-600 mr-1"></i> Bitácora Referencia
                             </label>
                             <input type="text" id="txt-bitacora" placeholder="Ej: 2026-001-VO" 
                                    class="input-modern w-full p-3 rounded-lg text-sm">
@@ -326,8 +326,8 @@
                             <i class="fas fa-list text-2xl"></i>
                         </div>
                         <div>
-                            <h3 class="text-lg font-bold">CatÃ¡logo de TrÃ¡mites</h3>
-                            <p class="text-xs text-purple-200 mt-1">GestiÃ³n de homoclaves</p>
+                            <h3 class="text-lg font-bold">Catálogo de Trámites</h3>
+                            <p class="text-xs text-purple-200 mt-1">Gestión de homoclaves</p>
                         </div>
                     </div>
                 </div>
@@ -343,7 +343,7 @@
                     
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-2">
-                            <i class="fas fa-file-text mr-1"></i> Nombre del TrÃ¡mite
+                            <i class="fas fa-file-text mr-1"></i> Nombre del Trámite
                         </label>
                         <input type="text" id="new-name" placeholder="Nombre completo" 
                                class="input-modern w-full p-2 rounded-lg text-sm">
@@ -356,10 +356,10 @@
                     
                     <div class="border-t pt-4">
                         <h4 class="text-xs font-bold text-slate-600 mb-3 uppercase tracking-wide">
-                            TrÃ¡mites Registrados
+                            Trámites Registrados
                         </h4>
                         <div id="catalogo-list" class="space-y-2 max-h-96 overflow-y-auto">
-                            <p class="text-xs text-slate-500 italic text-center py-2">Sin trÃ¡mites</p>
+                            <p class="text-xs text-slate-500 italic text-center py-2">Sin trámites</p>
                         </div>
                     </div>
                 </div>
@@ -372,8 +372,8 @@
                             <i class="fas fa-info-circle text-2xl"></i>
                         </div>
                         <div>
-                            <h3 class="text-lg font-bold">InformaciÃ³n del Sistema</h3>
-                            <p class="text-xs text-blue-200 mt-1">Estado y configuraciÃ³n</p>
+                            <h3 class="text-lg font-bold">Información del Sistema</h3>
+                            <p class="text-xs text-blue-200 mt-1">Estado y configuración</p>
                         </div>
                     </div>
                 </div>
@@ -381,13 +381,13 @@
                 <div class="p-6 space-y-3 text-xs">
                     <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                         <span class="font-semibold text-slate-600">
-                            <i class="fas fa-map-marker-alt text-emerald-600 mr-2"></i>Ãrea
+                            <i class="fas fa-map-marker-alt text-emerald-600 mr-2"></i>Área
                         </span>
                         <span class="font-bold text-slate-800">VO - Enlace de Servicios</span>
                     </div>
                     <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                         <span class="font-semibold text-slate-600">
-                            <i class="fas fa-calendar-alt text-emerald-600 mr-2"></i>Ãšltima ActualizaciÃ³n
+                            <i class="fas fa-calendar-alt text-emerald-600 mr-2"></i>Última Actualización
                         </span>
                         <span id="last-update" class="font-mono text-slate-700">--</span>
                     </div>
@@ -401,7 +401,7 @@
                     </div>
                     <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                         <span class="font-semibold text-slate-600">
-                            <i class="fas fa-shield-alt text-emerald-600 mr-2"></i>VersiÃ³n
+                            <i class="fas fa-shield-alt text-emerald-600 mr-2"></i>Versión
                         </span>
                         <span class="font-mono text-slate-700">2.0.0</span>
                     </div>
