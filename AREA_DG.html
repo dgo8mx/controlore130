@@ -403,7 +403,7 @@
                         <span class="font-semibold text-slate-600">
                             <i class="fas fa-shield-alt text-emerald-600 mr-2"></i>Versión
                         </span>
-                        <span class="font-mono text-slate-700">2.0.1</span>
+                        <span class="font-mono text-slate-700">2.1.0</span>
                     </div>
                 </div>
             </div>
@@ -437,6 +437,14 @@
         let _sb = null;
         let conectado = false;
         let registroEditando = null;
+
+        // ============================================================
+        // FIX QuotaExceededError:
+        // Los registros sincronizados (que ya están en Supabase) se
+        // guardan SOLO en memoria, nunca en localStorage.
+        // localStorage solo contiene los registros PENDIENTES (locales).
+        // ============================================================
+        let registrosNube = [];  // <-- memoria, no localStorage
         
         window.onload = async function() {
             console.log("=== INICIALIZANDO ÁREA: " + AREA_SIGLAS + " ===");
@@ -520,15 +528,12 @@
             }
         }
         
+        // ============================================================
+        // CATÁLOGO — sin cambios, el catálogo es pequeño y está bien en localStorage
+        // ============================================================
         function inicializarCatalogo() {
             if (!localStorage.getItem('cat_' + AREA_SIGLAS)) {
                 localStorage.setItem('cat_' + AREA_SIGLAS, JSON.stringify([]));
-            }
-        }
-        
-        function inicializarRegistros() {
-            if (!localStorage.getItem('reg_' + AREA_SIGLAS)) {
-                localStorage.setItem('reg_' + AREA_SIGLAS, JSON.stringify([]));
             }
         }
         
@@ -569,13 +574,40 @@
             renderizarTodo();
             mostrarAlerta('success', 'Trámite eliminado del catálogo');
         }
-        
-        function obtenerRegistros() {
+
+        // ============================================================
+        // REGISTROS — aquí está el fix principal
+        // ============================================================
+
+        // Inicializa localStorage solo si no existe (para registros LOCALES)
+        function inicializarRegistros() {
+            if (!localStorage.getItem('reg_' + AREA_SIGLAS)) {
+                localStorage.setItem('reg_' + AREA_SIGLAS, JSON.stringify([]));
+            }
+        }
+
+        // Retorna SOLO los registros locales (pendientes) guardados en localStorage
+        function obtenerRegistrosLocales() {
             return JSON.parse(localStorage.getItem('reg_' + AREA_SIGLAS) || "[]");
         }
-        
-        function guardarRegistros(regs) {
+
+        // Guarda SOLO registros locales (pendientes) en localStorage
+        function guardarRegistrosLocales(regs) {
             localStorage.setItem('reg_' + AREA_SIGLAS, JSON.stringify(regs));
+            actualizarFecha();
+        }
+
+        // Retorna la combinación de nube + locales (en memoria, no escribe nada)
+        // Esta es la función que usan renderizar, exportar, estadísticas, etc.
+        function obtenerRegistros() {
+            return registrosNube.concat(obtenerRegistrosLocales());
+        }
+
+        // Guarda un nuevo registro local (pendiente de sincronizar)
+        function guardarRegistros(regs) {
+            // Solo guarda los que NO están sincronizados
+            const locales = regs.filter(function(r) { return !r.sincronizado; });
+            guardarRegistrosLocales(locales);
             actualizarFecha();
         }
         
@@ -593,7 +625,8 @@
                 return;
             }
             
-            let regs = obtenerRegistros();
+            // Para el consecutivo, usamos TODOS los registros (nube + locales)
+            const regs = obtenerRegistros();
             const anio = new Date().getFullYear();
             const regsDelAnio = regs.filter(function(r) { return r.anio === anio; });
             const consecutivo = regsDelAnio.length + 1;
@@ -612,8 +645,11 @@
                 bloqueado: false
             };
             
-            regs.push(nuevoRegistro);
-            guardarRegistros(regs);
+            // Solo agregamos a los locales
+            let locales = obtenerRegistrosLocales();
+            locales.push(nuevoRegistro);
+            guardarRegistrosLocales(locales);
+
             limpiarFormulario();
             renderizarTodo();
             mostrarAlerta('success', 'Determinante generado: ' + determinante);
@@ -632,8 +668,8 @@
                 return;
             }
             
-            let regs = obtenerRegistros();
-            const pend = regs.filter(function(r) { return !r.sincronizado; });
+            const locales = obtenerRegistrosLocales();
+            const pend = locales.filter(function(r) { return !r.sincronizado; });
             
             if (pend.length === 0) {
                 mostrarAlerta('info', 'No hay registros pendientes de sincronizar');
@@ -660,14 +696,14 @@
                 const result = await _sb.from('registro_oficios').insert(datos);
                 if (result.error) throw result.error;
                 
-                regs = regs.map(function(r) {
-                    if (!r.sincronizado) {
-                        return Object.assign({}, r, {sincronizado: true, bloqueado: true});
-                    }
-                    return r;
+                // Los que se sincronizaron pasan a memoria (registrosNube)
+                // y se eliminan de localStorage
+                pend.forEach(function(r) {
+                    registrosNube.push(Object.assign({}, r, { sincronizado: true, bloqueado: true }));
                 });
-                
-                guardarRegistros(regs);
+
+                // Quedamos con un arreglo vacío en localStorage (ya no hay pendientes)
+                guardarRegistrosLocales([]);
                 
                 await sincronizarCatalogoConNube();
                 
@@ -712,7 +748,6 @@
                     }
                 }
                 
-                // Marcar todos como sincronizados
                 const catActualizado = cat.map(function(item) {
                     return Object.assign({}, item, {local: false});
                 });
@@ -750,26 +785,25 @@
             try {
                 const { data, error } = await _sb
                     .from('registro_oficios')
-                    .select('*')
+                    .select('determinante, consecutivo, anio, area_siglas, homoclave, bitacora_referencia, asunto, fecha')
                     .eq('area_siglas', AREA_SIGLAS)
-                    .order('fecha', { ascending: false });
+                    .order('fecha', { ascending: false })
+                    .limit(500);  // <-- limite de seguridad
                 
                 if (error) throw error;
                 
-                const locales = obtenerRegistros().filter(function(r) { return !r.sincronizado; });
-                
-                const nube = (data || []).map(function(reg) {
+                // Guardamos los datos de la nube SOLO en memoria
+                registrosNube = (data || []).map(function(reg) {
                     return Object.assign({}, reg, {
                         sincronizado: true,
                         bloqueado: true
                     });
                 });
-                
-                const combinados = nube.concat(locales);
-                guardarRegistros(combinados);
-                
-                console.log("✓ Registros cargados:", combinados.length);
-                return combinados.length;
+
+                // Los registros locales (pendientes) siguen en localStorage, no los tocamos
+                console.log("✓ Registros nube en memoria:", registrosNube.length);
+                console.log("✓ Registros locales en localStorage:", obtenerRegistrosLocales().length);
+                return registrosNube.length;
             } catch (error) {
                 throw error;
             }
@@ -786,13 +820,11 @@
                 if (error) throw error;
                 
                 if (data && data.length > 0) {
-                    // Obtener catálogo local
                     const catalogoLocal = obtenerCatalogo();
                     const localesNoSincronizados = catalogoLocal.filter(function(item) { 
                         return item.local === true; 
                     });
                     
-                    // Mapear datos de la nube
                     const catalogoNube = data.map(function(item) {
                         return {
                             h: item.homoclave,
@@ -801,10 +833,8 @@
                         };
                     });
                     
-                    // Combinar: nube + locales no sincronizados
                     const catalogoCombinado = catalogoNube.concat(localesNoSincronizados);
                     
-                    // Eliminar duplicados basados en homoclave
                     const catalogoFinal = catalogoCombinado.reduce(function(acc, item) {
                         if (!acc.some(function(x) { return x.h === item.h; })) {
                             acc.push(item);
@@ -824,7 +854,8 @@
         }
         
         function eliminar(idx) {
-            let regs = obtenerRegistros();
+            // idx se refiere al arreglo combinado (nube + locales)
+            const regs = obtenerRegistros();
             const reg = regs[idx];
             
             if (reg.sincronizado || reg.bloqueado) {
@@ -834,8 +865,12 @@
             
             if (!confirm('¿Eliminar el registro ' + reg.determinante + '?')) return;
             
-            regs.splice(idx, 1);
-            guardarRegistros(regs);
+            // Solo eliminamos de los locales
+            let locales = obtenerRegistrosLocales();
+            // Buscamos por determinante para identificar el registro correcto
+            locales = locales.filter(function(r) { return r.determinante !== reg.determinante; });
+            guardarRegistrosLocales(locales);
+
             renderizarTodo();
             mostrarAlerta('success', 'Registro eliminado');
         }
@@ -951,7 +986,7 @@
         }
         
         function renderizarTabla() {
-            const regs = obtenerRegistros();
+            const regs = obtenerRegistros(); // combina nube (memoria) + locales (localStorage)
             const tbody = document.getElementById('table-body');
             
             if (regs.length === 0) {
@@ -1057,7 +1092,7 @@
                 fecha: new Date().toISOString(),
                 registros: regs,
                 catalogo: cat,
-                version: '2.0.1'
+                version: '2.1.0'
             };
             
             console.log("✓ Respaldo automático generado:", new Date().toLocaleTimeString());
