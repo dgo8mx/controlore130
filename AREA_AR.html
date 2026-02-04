@@ -114,6 +114,76 @@
             font-family: 'Courier New', monospace;
             box-shadow: 0 4px 6px rgba(0,0,0,0.1);
         }
+        .pagination-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+            margin-top: 1rem;
+            flex-wrap: wrap;
+        }
+        .pagination-btn {
+            padding: 0.5rem 1rem;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+            transition: all 0.2s;
+            border: 2px solid #e2e8f0;
+        }
+        .pagination-btn:hover:not(:disabled) {
+            background-color: #10b981;
+            color: white;
+            border-color: #10b981;
+        }
+        .pagination-btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+        .pagination-btn.active {
+            background-color: #10b981;
+            color: white;
+            border-color: #10b981;
+        }
+        .page-info {
+            padding: 0.5rem 1rem;
+            background-color: #f1f5f9;
+            border-radius: 0.5rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+        }
+        .filter-section {
+            background: white;
+            padding: 1rem;
+            border-radius: 0.75rem;
+            margin-bottom: 1rem;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
+        .filter-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 1rem;
+            align-items: end;
+        }
+        .year-badge {
+            display: inline-block;
+            padding: 0.25rem 0.75rem;
+            margin: 0.25rem;
+            background: #e0f2fe;
+            color: #0369a1;
+            border-radius: 9999px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .year-badge:hover {
+            background: #0369a1;
+            color: white;
+        }
+        .year-badge.active {
+            background: #10b981;
+            color: white;
+        }
     </style>
 </head>
 <body class="bg-slate-50">
@@ -133,9 +203,9 @@
                     </div>
                 </div>
                 <div class="flex gap-2 flex-wrap">
-                    <button onclick="cargarDatosDesdeNube()" 
+                    <button onclick="cargarTodosLosRegistros()" 
                             class="bg-purple-600 hover:bg-purple-700 px-4 py-2 rounded-lg text-xs font-bold shadow-lg transition">
-                        <i class="fas fa-cloud-download-alt"></i> CARGAR
+                        <i class="fas fa-cloud-download-alt"></i> CARGAR TODO
                     </button>
                     <button onclick="sincronizarConNube()" 
                             class="bg-emerald-600 hover:bg-emerald-700 px-4 py-2 rounded-lg text-xs font-bold shadow-lg transition">
@@ -145,9 +215,9 @@
                             class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-xs font-bold shadow-lg transition">
                         <i class="fas fa-file-csv"></i> EXPORTAR
                     </button>
-                    <button onclick="limpiarAlmacenamiento()" 
+                    <button onclick="limpiarCache()" 
                             class="bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded-lg text-xs font-bold shadow-lg transition">
-                        <i class="fas fa-broom"></i> LIMPIAR
+                        <i class="fas fa-broom"></i> LIMPIAR CACHE
                     </button>
                     <button onclick="probarConexion()" 
                             class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg text-xs font-bold shadow-lg transition">
@@ -159,11 +229,11 @@
     </header>
 
     <section class="container mx-auto px-6 py-4 no-print">
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-6 gap-4">
             <div class="stat-card">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-xs text-slate-500 font-semibold uppercase">Total Registros</p>
+                        <p class="text-xs text-slate-500 font-semibold uppercase">Total</p>
                         <h3 id="stat-total" class="text-2xl font-bold text-slate-800">0</h3>
                     </div>
                     <div class="bg-emerald-100 p-3 rounded-lg">
@@ -174,11 +244,11 @@
             <div class="stat-card" style="border-left-color: #3b82f6;">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-xs text-slate-500 font-semibold uppercase">Sincronizados</p>
-                        <h3 id="stat-sincronizados" class="text-2xl font-bold text-slate-800">0</h3>
+                        <p class="text-xs text-slate-500 font-semibold uppercase">Nube</p>
+                        <h3 id="stat-nube" class="text-2xl font-bold text-slate-800">0</h3>
                     </div>
                     <div class="bg-blue-100 p-3 rounded-lg">
-                        <i class="fas fa-cloud-check text-xl text-blue-600"></i>
+                        <i class="fas fa-cloud text-xl text-blue-600"></i>
                     </div>
                 </div>
             </div>
@@ -207,11 +277,22 @@
             <div class="stat-card" style="border-left-color: #06b6d4;">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-xs text-slate-500 font-semibold uppercase">Trámites</p>
-                        <h3 id="stat-tramites" class="text-2xl font-bold text-slate-800">0</h3>
+                        <p class="text-xs text-slate-500 font-semibold uppercase">Este Mes</p>
+                        <h3 id="stat-mes" class="text-2xl font-bold text-slate-800">0</h3>
                     </div>
                     <div class="bg-cyan-100 p-3 rounded-lg">
-                        <i class="fas fa-list text-xl text-cyan-600"></i>
+                        <i class="fas fa-calendar text-xl text-cyan-600"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="stat-card" style="border-left-color: #ec4899;">
+                <div class="flex items-center justify-between">
+                    <div>
+                        <p class="text-xs text-slate-500 font-semibold uppercase">Este Año</p>
+                        <h3 id="stat-anio" class="text-2xl font-bold text-slate-800">0</h3>
+                    </div>
+                    <div class="bg-pink-100 p-3 rounded-lg">
+                        <i class="fas fa-calendar-check text-xl text-pink-600"></i>
                     </div>
                 </div>
             </div>
@@ -291,7 +372,7 @@
                             </div>
                             <div>
                                 <h2 class="text-xl font-bold">Historial de Determinantes</h2>
-                                <p class="text-xs text-slate-300 mt-1">Registros capturados del área</p>
+                                <p class="text-xs text-slate-300 mt-1" id="subtitle-registros">Todos los registros</p>
                             </div>
                         </div>
                         <div class="flex gap-2">
@@ -304,10 +385,56 @@
                 </div>
                 
                 <div class="p-6">
-                    <div class="mb-4">
-                        <input type="text" id="search-input" placeholder="🔍 Buscar en registros..." 
-                               onkeyup="buscarEnTabla()"
-                               class="input-modern w-full p-3 rounded-lg text-sm">
+                    <!-- Filtros -->
+                    <div class="filter-section">
+                        <div class="mb-3">
+                            <label class="block text-xs font-bold text-slate-700 mb-2">
+                                <i class="fas fa-filter mr-1"></i> FILTRAR POR AÑO
+                            </label>
+                            <div id="year-filters" class="flex flex-wrap gap-2"></div>
+                        </div>
+                        <div class="filter-grid">
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-2">
+                                    <i class="fas fa-search mr-1"></i> BUSCAR
+                                </label>
+                                <input type="text" id="search-input" placeholder="Buscar en registros..." 
+                                       onkeyup="aplicarFiltros()"
+                                       class="input-modern w-full p-2 rounded-lg text-sm">
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-2">
+                                    <i class="fas fa-folder mr-1"></i> TRÁMITE
+                                </label>
+                                <select id="filter-tramite" onchange="aplicarFiltros()" 
+                                        class="input-modern w-full p-2 rounded-lg text-sm">
+                                    <option value="">Todos</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-2">
+                                    <i class="fas fa-sort mr-1"></i> ORDENAR
+                                </label>
+                                <select id="sort-order" onchange="aplicarFiltros()" 
+                                        class="input-modern w-full p-2 rounded-lg text-sm">
+                                    <option value="desc">Más recientes primero</option>
+                                    <option value="asc">Más antiguos primero</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-xs font-bold text-slate-700 mb-2">
+                                    <i class="fas fa-list mr-1"></i> MOSTRAR
+                                </label>
+                                <select id="items-per-page" onchange="cambiarItemsPorPagina()" 
+                                        class="input-modern w-full p-2 rounded-lg text-sm">
+                                    <option value="25">25 por página</option>
+                                    <option value="50">50 por página</option>
+                                    <option value="100">100 por página</option>
+                                    <option value="250">250 por página</option>
+                                    <option value="all">Todos</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
                     
                     <div class="overflow-x-auto">
@@ -334,6 +461,25 @@
                                 </tr>
                             </tbody>
                         </table>
+                    </div>
+
+                    <!-- Controles de paginación -->
+                    <div id="pagination-controls" class="pagination-controls" style="display: none;">
+                        <button onclick="irAPagina(1)" class="pagination-btn">
+                            <i class="fas fa-angle-double-left"></i>
+                        </button>
+                        <button onclick="cambiarPagina(-1)" class="pagination-btn">
+                            <i class="fas fa-angle-left"></i> Anterior
+                        </button>
+                        <span class="page-info">
+                            Página <span id="current-page">1</span> de <span id="total-pages">1</span>
+                        </span>
+                        <button onclick="cambiarPagina(1)" class="pagination-btn">
+                            Siguiente <i class="fas fa-angle-right"></i>
+                        </button>
+                        <button onclick="irAPaginaFinal()" class="pagination-btn">
+                            <i class="fas fa-angle-double-right"></i>
+                        </button>
                     </div>
                 </div>
             </div>
@@ -377,7 +523,7 @@
                     
                     <div class="border-t pt-4">
                         <h4 class="text-xs font-bold text-slate-600 mb-3 uppercase tracking-wide">
-                            Trámites Registrados
+                            Trámites Registrados (<span id="count-tramites">0</span>)
                         </h4>
                         <div id="catalogo-list" class="space-y-2 max-h-96 overflow-y-auto">
                             <p class="text-xs text-slate-500 italic text-center py-2">Sin trámites</p>
@@ -408,21 +554,27 @@
                     </div>
                     <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                         <span class="font-semibold text-slate-600">
+                            <i class="fas fa-database text-emerald-600 mr-2"></i>Registros en Memoria
+                        </span>
+                        <span id="memory-count" class="font-mono text-slate-700">0</span>
+                    </div>
+                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                        <span class="font-semibold text-slate-600">
+                            <i class="fas fa-calendar-alt text-emerald-600 mr-2"></i>Última Sincronización
+                        </span>
+                        <span id="last-sync" class="font-mono text-slate-700">--</span>
+                    </div>
+                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
+                        <span class="font-semibold text-slate-600">
                             <i class="fas fa-calendar-alt text-emerald-600 mr-2"></i>Última Actualización
                         </span>
                         <span id="last-update" class="font-mono text-slate-700">--</span>
                     </div>
                     <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                         <span class="font-semibold text-slate-600">
-                            <i class="fas fa-database text-emerald-600 mr-2"></i>Uso Storage
-                        </span>
-                        <span id="storage-usage" class="font-mono text-slate-700">0%</span>
-                    </div>
-                    <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
-                        <span class="font-semibold text-slate-600">
                             <i class="fas fa-shield-alt text-emerald-600 mr-2"></i>Versión
                         </span>
-                        <span class="font-mono text-slate-700">2.2.0</span>
+                        <span class="font-mono text-slate-700">3.0.0</span>
                     </div>
                 </div>
             </div>
@@ -455,15 +607,22 @@
         
         let _sb = null;
         let conectado = false;
-        let ultimoConsecutivoNube = 0; // Variable para almacenar el último consecutivo de la nube
+        let ultimoConsecutivoNube = 0;
+        
+        // Variables para manejo de datos
+        let todosLosRegistros = []; // Todos los registros en memoria
+        let registrosFiltrados = []; // Registros después de aplicar filtros
+        let registrosPendientes = []; // Solo registros pendientes de sincronizar
+        
+        // Variables de paginación
+        let paginaActual = 1;
+        let itemsPorPagina = 25;
+        let filtroAnio = 'todos';
         
         const LS_CATALOGO = `cat_${AREA_SIGLAS}`;
-        const LS_REGISTROS = `reg_${AREA_SIGLAS}`;
-        const LS_ULTIMA_ACT = `upd_${AREA_SIGLAS}`;
+        const LS_PENDIENTES = `pend_${AREA_SIGLAS}`;
+        const LS_ULTIMA_SYNC = `sync_${AREA_SIGLAS}`;
         const LS_ULTIMO_CONSECUTIVO = `cons_${AREA_SIGLAS}`;
-        
-        // Límites de almacenamiento
-        const MAX_REGISTROS_LOCAL = 100;
         
         window.onload = async function() {
             console.log("=== INICIALIZANDO ÁREA: " + AREA_SIGLAS + " ===");
@@ -483,27 +642,133 @@
                 mostrarAlerta('error', 'Error de inicialización: ' + e.message);
             }
             
-            verificarEspacioStorage();
             inicializarStorage();
+            cargarPendientesLocal();
             configurarContador();
             
             await verificarConexion();
             
             if (conectado) {
                 await cargarUltimoConsecutivoNube();
-                await cargarDatosDesdeNube();
+                await cargarTodosLosRegistros();
+                await cargarCatalogoDesdeNube();
             }
             
             renderizarTodo();
             actualizarVistaProximoFolio();
             actualizarFecha();
+            actualizarUltimaSincronizacion();
             console.log("✓ Sistema inicializado");
         };
         
-        // Nueva función para cargar el último consecutivo desde Supabase
+        function inicializarStorage() {
+            try {
+                if (!localStorage.getItem(LS_CATALOGO)) {
+                    localStorage.setItem(LS_CATALOGO, JSON.stringify([]));
+                }
+                if (!localStorage.getItem(LS_PENDIENTES)) {
+                    localStorage.setItem(LS_PENDIENTES, JSON.stringify([]));
+                }
+                console.log("✓ Storage inicializado");
+            } catch(e) {
+                console.error("✗ Error al inicializar storage:", e);
+            }
+        }
+        
+        function cargarPendientesLocal() {
+            try {
+                const data = localStorage.getItem(LS_PENDIENTES);
+                registrosPendientes = data ? JSON.parse(data) : [];
+                console.log(`✓ ${registrosPendientes.length} registros pendientes cargados`);
+            } catch(e) {
+                console.error("Error al cargar pendientes:", e);
+                registrosPendientes = [];
+            }
+        }
+        
+        function guardarPendientesLocal() {
+            try {
+                localStorage.setItem(LS_PENDIENTES, JSON.stringify(registrosPendientes));
+                return true;
+            } catch(e) {
+                console.error("Error al guardar pendientes:", e);
+                mostrarAlerta('error', 'Error al guardar pendientes localmente');
+                return false;
+            }
+        }
+        
+        async function cargarTodosLosRegistros() {
+            if (!conectado) {
+                mostrarAlerta('error', 'No hay conexión a la base de datos');
+                return;
+            }
+            
+            mostrarCargando(true, 'Cargando todos los registros...');
+            
+            try {
+                let todosLosDatos = [];
+                let desde = 0;
+                const limite = 1000;
+                let hayMas = true;
+                
+                while (hayMas) {
+                    const { data, error, count } = await _sb
+                        .from('registro_oficios')
+                        .select('*', { count: 'exact' })
+                        .eq('area_siglas', AREA_SIGLAS)
+                        .order('fecha', { ascending: false })
+                        .range(desde, desde + limite - 1);
+                    
+                    if (error) throw error;
+                    
+                    if (data && data.length > 0) {
+                        todosLosDatos = todosLosDatos.concat(data);
+                        desde += limite;
+                        
+                        // Actualizar progreso
+                        const progreso = Math.min(100, Math.round((todosLosDatos.length / (count || todosLosDatos.length)) * 100));
+                        mostrarCargando(true, `Cargando registros... ${todosLosDatos.length} de ${count || '?'} (${progreso}%)`);
+                        
+                        console.log(`Cargados ${todosLosDatos.length} registros...`);
+                    }
+                    
+                    hayMas = data && data.length === limite;
+                }
+                
+                // Marcar todos como sincronizados y de la nube
+                todosLosRegistros = todosLosDatos.map(reg => ({
+                    ...reg,
+                    sincronizado: true,
+                    bloqueado: true,
+                    origen: 'nube'
+                }));
+                
+                // Agregar registros pendientes locales
+                registrosPendientes.forEach(regLocal => {
+                    const existe = todosLosRegistros.some(r => r.determinante === regLocal.determinante);
+                    if (!existe) {
+                        todosLosRegistros.push(regLocal);
+                    }
+                });
+                
+                console.log(`✓ Total de ${todosLosRegistros.length} registros cargados (${todosLosDatos.length} de nube, ${registrosPendientes.length} pendientes)`);
+                
+                aplicarFiltros();
+                actualizarEstadisticas();
+                actualizarFiltrosAnio();
+                actualizarFiltroTramites();
+                mostrarAlerta('success', `${todosLosRegistros.length} registros cargados exitosamente`);
+                
+            } catch (error) {
+                console.error("Error al cargar registros:", error);
+                mostrarAlerta('error', 'Error al cargar registros: ' + error.message);
+            } finally {
+                mostrarCargando(false);
+            }
+        }
+        
         async function cargarUltimoConsecutivoNube() {
             if (!conectado) {
-                console.log("⚠ Sin conexión - usando consecutivo local");
                 cargarUltimoConsecutivoLocal();
                 return;
             }
@@ -520,32 +785,24 @@
                     .limit(1)
                     .maybeSingle();
                 
-                if (error && error.code !== 'PGRST116') { // PGRST116 = no rows
+                if (error && error.code !== 'PGRST116') {
                     throw error;
                 }
                 
                 if (data) {
                     ultimoConsecutivoNube = data.consecutivo;
                     console.log(`✓ Último consecutivo en nube: ${ultimoConsecutivoNube}`);
-                    
-                    // Guardar en localStorage para modo offline
-                    try {
-                        localStorage.setItem(LS_ULTIMO_CONSECUTIVO, ultimoConsecutivoNube.toString());
-                    } catch(e) {
-                        console.error("Error al guardar consecutivo:", e);
-                    }
+                    localStorage.setItem(LS_ULTIMO_CONSECUTIVO, ultimoConsecutivoNube.toString());
                 } else {
                     ultimoConsecutivoNube = 0;
                     console.log("✓ No hay registros previos en nube para este año");
                 }
             } catch (e) {
                 console.error("✗ Error al cargar consecutivo:", e);
-                mostrarAlerta('warning', 'No se pudo obtener el último folio. Usando modo local.');
                 cargarUltimoConsecutivoLocal();
             }
         }
         
-        // Función auxiliar para cargar consecutivo desde localStorage
         function cargarUltimoConsecutivoLocal() {
             try {
                 const guardado = localStorage.getItem(LS_ULTIMO_CONSECUTIVO);
@@ -556,26 +813,20 @@
             }
         }
         
-        // Función para obtener el próximo consecutivo disponible
         function obtenerProximoConsecutivo() {
-            const regs = obtenerRegistros();
             const anio = new Date().getFullYear();
             
-            // Obtener el máximo consecutivo local del año actual
-            const regsDelAnio = regs.filter(r => r.anio === anio);
-            const maxConsecutivoLocal = regsDelAnio.length > 0 
+            // Obtener máximo de registros en memoria del año actual
+            const regsDelAnio = todosLosRegistros.filter(r => r.anio === anio);
+            const maxConsecutivoMemoria = regsDelAnio.length > 0 
                 ? Math.max(...regsDelAnio.map(r => r.consecutivo))
                 : 0;
             
-            // Usar el máximo entre el consecutivo de la nube y el local
-            const maxConsecutivo = Math.max(ultimoConsecutivoNube, maxConsecutivoLocal);
-            
-            console.log(`Consecutivos - Nube: ${ultimoConsecutivoNube}, Local: ${maxConsecutivoLocal}, Próximo: ${maxConsecutivo + 1}`);
+            const maxConsecutivo = Math.max(ultimoConsecutivoNube, maxConsecutivoMemoria);
             
             return maxConsecutivo + 1;
         }
         
-        // Función para actualizar la vista del próximo folio
         function actualizarVistaProximoFolio() {
             const proximoConsecutivo = obtenerProximoConsecutivo();
             const anio = new Date().getFullYear();
@@ -584,140 +835,6 @@
             const folioElement = document.getElementById('folio-text');
             if (folioElement) {
                 folioElement.textContent = proximoFolio;
-            }
-        }
-        
-        function verificarEspacioStorage() {
-            try {
-                const testKey = 'test_storage_' + Date.now();
-                const testData = 'x'.repeat(1000);
-                localStorage.setItem(testKey, testData);
-                localStorage.removeItem(testKey);
-                
-                let totalSize = 0;
-                for (let key in localStorage) {
-                    if (localStorage.hasOwnProperty(key)) {
-                        totalSize += localStorage[key].length + key.length;
-                    }
-                }
-                
-                const usagePercent = ((totalSize / (5 * 1024 * 1024)) * 100).toFixed(1);
-                document.getElementById('storage-usage').textContent = usagePercent + '%';
-                
-                if (usagePercent > 80) {
-                    mostrarAlerta('warning', 'Almacenamiento al ' + usagePercent + '%. Considere limpiar datos antiguos.');
-                }
-            } catch(e) {
-                console.error("Error al verificar storage:", e);
-                if (e.name === 'QuotaExceededError') {
-                    mostrarAlerta('error', 'Almacenamiento lleno. Use el botón LIMPIAR para liberar espacio.');
-                }
-            }
-        }
-        
-        function limpiarAlmacenamiento() {
-            if (!confirm('¿Desea limpiar registros sincronizados antiguos? Solo se mantendrán los últimos 50 registros sincronizados y todos los pendientes.')) {
-                return;
-            }
-            
-            try {
-                let regs = obtenerRegistros();
-                const pendientes = regs.filter(r => !r.sincronizado);
-                const sincronizados = regs.filter(r => r.sincronizado)
-                    .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
-                    .slice(0, 50);
-                
-                const nuevosRegs = [...sincronizados, ...pendientes];
-                guardarRegistros(nuevosRegs);
-                
-                // Limpiar respaldos antiguos
-                for (let key in localStorage) {
-                    if (key.startsWith('respaldo_')) {
-                        localStorage.removeItem(key);
-                    }
-                }
-                
-                renderizarTodo();
-                verificarEspacioStorage();
-                mostrarAlerta('success', `Limpieza completada. ${regs.length - nuevosRegs.length} registros eliminados.`);
-            } catch(e) {
-                console.error("Error al limpiar:", e);
-                mostrarAlerta('error', 'Error al limpiar: ' + e.message);
-            }
-        }
-        
-        function inicializarStorage() {
-            try {
-                if (!localStorage.getItem(LS_CATALOGO)) {
-                    localStorage.setItem(LS_CATALOGO, JSON.stringify([]));
-                }
-                if (!localStorage.getItem(LS_REGISTROS)) {
-                    localStorage.setItem(LS_REGISTROS, JSON.stringify([]));
-                }
-                console.log("✓ Storage inicializado");
-            } catch(e) {
-                console.error("✗ Error al inicializar storage:", e);
-                if (e.name === 'QuotaExceededError') {
-                    mostrarAlerta('error', 'Almacenamiento lleno. Sincronice y limpie datos antiguos.');
-                }
-            }
-        }
-        
-        function obtenerCatalogo() {
-            try {
-                const data = localStorage.getItem(LS_CATALOGO);
-                return data ? JSON.parse(data) : [];
-            } catch(e) {
-                console.error("Error al leer catálogo:", e);
-                return [];
-            }
-        }
-        
-        function guardarCatalogo(cat) {
-            try {
-                localStorage.setItem(LS_CATALOGO, JSON.stringify(cat));
-                actualizarFecha();
-                return true;
-            } catch(e) {
-                console.error("Error al guardar catálogo:", e);
-                if (e.name === 'QuotaExceededError') {
-                    mostrarAlerta('error', 'Almacenamiento lleno. No se pudo guardar.');
-                }
-                return false;
-            }
-        }
-        
-        function obtenerRegistros() {
-            try {
-                const data = localStorage.getItem(LS_REGISTROS);
-                return data ? JSON.parse(data) : [];
-            } catch(e) {
-                console.error("Error al leer registros:", e);
-                return [];
-            }
-        }
-        
-        function guardarRegistros(regs) {
-            try {
-                if (regs.length > MAX_REGISTROS_LOCAL) {
-                    const pendientes = regs.filter(r => !r.sincronizado);
-                    const sincronizados = regs.filter(r => r.sincronizado)
-                        .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
-                        .slice(0, MAX_REGISTROS_LOCAL - pendientes.length);
-                    regs = [...sincronizados, ...pendientes];
-                }
-                
-                localStorage.setItem(LS_REGISTROS, JSON.stringify(regs));
-                actualizarFecha();
-                verificarEspacioStorage();
-                return true;
-            } catch(e) {
-                console.error("Error al guardar registros:", e);
-                if (e.name === 'QuotaExceededError') {
-                    mostrarAlerta('error', 'Almacenamiento lleno. Sincronice datos con la nube y use LIMPIAR.');
-                    return false;
-                }
-                return false;
             }
         }
         
@@ -761,7 +878,6 @@
                 mostrarAlerta('success', 'Conexión exitosa');
                 console.log("✓ Conexión OK");
                 
-                // Recargar consecutivo desde la nube
                 await cargarUltimoConsecutivoNube();
                 actualizarVistaProximoFolio();
             } catch (e) {
@@ -806,6 +922,27 @@
             }
         }
         
+        function obtenerCatalogo() {
+            try {
+                const data = localStorage.getItem(LS_CATALOGO);
+                return data ? JSON.parse(data) : [];
+            } catch(e) {
+                console.error("Error al leer catálogo:", e);
+                return [];
+            }
+        }
+        
+        function guardarCatalogo(cat) {
+            try {
+                localStorage.setItem(LS_CATALOGO, JSON.stringify(cat));
+                actualizarFecha();
+                return true;
+            } catch(e) {
+                console.error("Error al guardar catálogo:", e);
+                return false;
+            }
+        }
+        
         function agregarCatalogo() {
             const h = document.getElementById('new-hc').value.trim();
             const n = document.getElementById('new-name').value.trim();
@@ -825,17 +962,21 @@
             if (guardarCatalogo(cat)) {
                 document.getElementById('new-hc').value = '';
                 document.getElementById('new-name').value = '';
-                renderizarTodo();
+                renderizarCatalogo();
+                renderizarSelector();
+                actualizarFiltroTramites();
                 mostrarAlerta('success', 'Trámite agregado');
             }
         }
         
         function eliminarDelCatalogo(homoclave) {
-            if (!confirm('¿Eliminar este trámite?')) return;
+            if (!confirm('¿Eliminar este trámite del catálogo?')) return;
             
             let cat = obtenerCatalogo().filter(c => c.h !== homoclave);
             if (guardarCatalogo(cat)) {
-                renderizarTodo();
+                renderizarCatalogo();
+                renderizarSelector();
+                actualizarFiltroTramites();
                 mostrarAlerta('success', 'Trámite eliminado');
             }
         }
@@ -854,14 +995,12 @@
                 return;
             }
             
-            // Si hay conexión, recargar el consecutivo antes de crear el registro
             if (conectado) {
-                mostrarCargando(true);
+                mostrarCargando(true, 'Verificando consecutivo...');
                 try {
                     await cargarUltimoConsecutivoNube();
                 } catch(e) {
                     console.error("Error al actualizar consecutivo:", e);
-                    // Continuar con el consecutivo local si falla
                 } finally {
                     mostrarCargando(false);
                 }
@@ -882,27 +1021,23 @@
                 asunto,
                 fecha: new Date().toISOString(),
                 sincronizado: false,
-                bloqueado: false
+                bloqueado: false,
+                origen: 'local'
             };
             
-            let regs = obtenerRegistros();
-            regs.push(nuevo);
+            registrosPendientes.push(nuevo);
+            todosLosRegistros.unshift(nuevo); // Agregar al inicio
             
-            if (guardarRegistros(regs)) {
-                // Actualizar el último consecutivo local
+            if (guardarPendientesLocal()) {
                 ultimoConsecutivoNube = Math.max(ultimoConsecutivoNube, consecutivo);
-                try {
-                    localStorage.setItem(LS_ULTIMO_CONSECUTIVO, ultimoConsecutivoNube.toString());
-                } catch(e) {
-                    console.error("Error al actualizar consecutivo local:", e);
-                }
+                localStorage.setItem(LS_ULTIMO_CONSECUTIVO, ultimoConsecutivoNube.toString());
                 
                 limpiarFormulario();
-                renderizarTodo();
+                aplicarFiltros();
+                actualizarEstadisticas();
                 actualizarVistaProximoFolio();
                 mostrarAlerta('success', 'Determinante creado: ' + determinante);
                 
-                // Sugerir sincronización si hay conexión
                 if (conectado) {
                     setTimeout(() => {
                         if (confirm('¿Desea sincronizar este registro con la nube ahora?')) {
@@ -927,21 +1062,17 @@
                 return;
             }
             
-            let regs = obtenerRegistros();
-            const pend = regs.filter(r => !r.sincronizado);
-            
-            if (pend.length === 0) {
-                mostrarAlerta('info', 'No hay registros pendientes');
+            if (registrosPendientes.length === 0) {
+                mostrarAlerta('info', 'No hay registros pendientes de sincronizar');
                 return;
             }
             
-            mostrarCargando(true);
+            mostrarCargando(true, 'Sincronizando...');
             
             try {
-                // Recargar consecutivo antes de sincronizar
                 await cargarUltimoConsecutivoNube();
                 
-                const datos = pend.map(r => ({
+                const datos = registrosPendientes.map(r => ({
                     determinante: r.determinante,
                     consecutivo: r.consecutivo,
                     anio: r.anio,
@@ -958,20 +1089,32 @@
                 
                 if (error) throw error;
                 
-                regs = regs.map(r => !r.sincronizado ? {...r, sincronizado: true, bloqueado: true} : r);
-                guardarRegistros(regs);
+                // Actualizar registros sincronizados
+                registrosPendientes.forEach(regPend => {
+                    const idx = todosLosRegistros.findIndex(r => r.determinante === regPend.determinante);
+                    if (idx !== -1) {
+                        todosLosRegistros[idx].sincronizado = true;
+                        todosLosRegistros[idx].bloqueado = true;
+                        todosLosRegistros[idx].origen = 'nube';
+                    }
+                });
                 
-                // Actualizar consecutivo después de sincronizar
+                const cantSincronizados = registrosPendientes.length;
+                registrosPendientes = [];
+                guardarPendientesLocal();
+                
                 await cargarUltimoConsecutivoNube();
-                
                 await sincronizarCatalogoConNube();
                 
-                renderizarTodo();
+                aplicarFiltros();
+                actualizarEstadisticas();
                 actualizarVistaProximoFolio();
-                mostrarAlerta('success', `${pend.length} registros sincronizados`);
+                actualizarUltimaSincronizacion();
+                
+                mostrarAlerta('success', `${cantSincronizados} registros sincronizados exitosamente`);
             } catch (e) {
                 console.error("Error sync:", e);
-                mostrarAlerta('error', 'Error: ' + e.message);
+                mostrarAlerta('error', 'Error al sincronizar: ' + e.message);
             } finally {
                 mostrarCargando(false);
             }
@@ -1006,86 +1149,57 @@
             }
         }
         
-        async function cargarDatosDesdeNube() {
-            if (!conectado) {
-                console.log("⚠ Sin conexión");
-                return;
-            }
-            
-            mostrarCargando(true);
+        async function cargarCatalogoDesdeNube() {
+            if (!conectado) return;
             
             try {
-                await cargarUltimoConsecutivoNube();
-                await cargarRegistrosDesdeNube();
-                await cargarCatalogoDesdeNube();
-                renderizarTodo();
-                actualizarVistaProximoFolio();
-                mostrarAlerta('success', 'Datos actualizados desde la nube');
+                const { data, error } = await _sb
+                    .from('catalogo_tramites')
+                    .select('*')
+                    .eq('area_siglas', AREA_SIGLAS)
+                    .order('homoclave');
+                
+                if (error) throw error;
+                
+                if (data && data.length > 0) {
+                    const catalogo = data.map(item => ({h: item.homoclave, n: item.nombre_tramite}));
+                    guardarCatalogo(catalogo);
+                    console.log("✓ Catálogo cargado");
+                }
             } catch (error) {
-                console.error("Error cargar:", error);
-                mostrarAlerta('warning', 'Error al cargar: ' + error.message);
-            } finally {
-                mostrarCargando(false);
+                console.error("Error al cargar catálogo:", error);
             }
         }
         
-        async function cargarRegistrosDesdeNube() {
-            const { data, error } = await _sb
-                .from('registro_oficios')
-                .select('*')
-                .eq('area_siglas', AREA_SIGLAS)
-                .order('fecha', { ascending: false })
-                .limit(100);
+        function eliminarRegistro(determinante) {
+            const reg = todosLosRegistros.find(r => r.determinante === determinante);
             
-            if (error) throw error;
-            
-            const locales = obtenerRegistros().filter(r => !r.sincronizado);
-            const nube = (data || []).map(reg => ({...reg, sincronizado: true, bloqueado: true}));
-            
-            const idsNube = new Set(nube.map(r => r.determinante));
-            const localesFiltrados = locales.filter(r => !idsNube.has(r.determinante));
-            
-            guardarRegistros([...nube, ...localesFiltrados]);
-            console.log("✓ Registros cargados");
-        }
-        
-        async function cargarCatalogoDesdeNube() {
-            const { data, error } = await _sb
-                .from('catalogo_tramites')
-                .select('*')
-                .eq('area_siglas', AREA_SIGLAS)
-                .order('homoclave');
-            
-            if (error) throw error;
-            
-            if (data && data.length > 0) {
-                const catalogo = data.map(item => ({h: item.homoclave, n: item.nombre_tramite}));
-                guardarCatalogo(catalogo);
-                console.log("✓ Catálogo cargado");
-            }
-        }
-        
-        function eliminar(idx) {
-            let regs = obtenerRegistros();
-            const reg = regs[idx];
+            if (!reg) return;
             
             if (reg.sincronizado || reg.bloqueado) {
                 mostrarAlerta('error', 'No se puede eliminar un registro sincronizado');
                 return;
             }
             
-            if (!confirm('¿Eliminar ' + reg.determinante + '?')) return;
+            if (!confirm('¿Eliminar ' + determinante + '?\n\nEsta acción no se puede deshacer.')) return;
             
-            regs.splice(idx, 1);
-            if (guardarRegistros(regs)) {
-                renderizarTodo();
-                actualizarVistaProximoFolio();
-                mostrarAlerta('success', 'Eliminado');
-            }
+            // Eliminar de memoria
+            todosLosRegistros = todosLosRegistros.filter(r => r.determinante !== determinante);
+            
+            // Eliminar de pendientes
+            registrosPendientes = registrosPendientes.filter(r => r.determinante !== determinante);
+            guardarPendientesLocal();
+            
+            aplicarFiltros();
+            actualizarEstadisticas();
+            actualizarVistaProximoFolio();
+            mostrarAlerta('success', 'Registro eliminado');
         }
         
-        function verDetalle(idx) {
-            const reg = obtenerRegistros()[idx];
+        function verDetalle(determinante) {
+            const reg = todosLosRegistros.find(r => r.determinante === determinante);
+            if (!reg) return;
+            
             const fecha = new Date(reg.fecha).toLocaleString('es-MX', {
                 weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
             });
@@ -1133,8 +1247,10 @@
             document.getElementById(id).style.display = 'none';
         }
         
-        function duplicarRegistro(idx) {
-            const reg = obtenerRegistros()[idx];
+        function duplicarRegistro(determinante) {
+            const reg = todosLosRegistros.find(r => r.determinante === determinante);
+            if (!reg) return;
+            
             document.getElementById('sel-tramite').value = reg.homoclave || '';
             document.getElementById('txt-bitacora').value = '';
             document.getElementById('txt-asunto').value = reg.asunto;
@@ -1143,16 +1259,125 @@
             mostrarAlerta('info', 'Registro duplicado - se generará nuevo folio al guardar');
         }
         
+        // FUNCIONES DE FILTRADO Y PAGINACIÓN
+        
+        function actualizarFiltrosAnio() {
+            const anios = [...new Set(todosLosRegistros.map(r => r.anio))].sort((a, b) => b - a);
+            const container = document.getElementById('year-filters');
+            
+            let html = '<span class="year-badge ' + (filtroAnio === 'todos' ? 'active' : '') + '" onclick="filtrarPorAnio(\'todos\')">Todos</span>';
+            
+            anios.forEach(anio => {
+                html += `<span class="year-badge ${filtroAnio === anio ? 'active' : ''}" onclick="filtrarPorAnio(${anio})">${anio}</span>`;
+            });
+            
+            container.innerHTML = html;
+        }
+        
+        function filtrarPorAnio(anio) {
+            filtroAnio = anio;
+            paginaActual = 1;
+            aplicarFiltros();
+            actualizarFiltrosAnio();
+        }
+        
+        function actualizarFiltroTramites() {
+            const cat = obtenerCatalogo();
+            const select = document.getElementById('filter-tramite');
+            
+            let html = '<option value="">Todos</option>';
+            cat.forEach(c => {
+                html += `<option value="${c.h}">${c.h} - ${c.n}</option>`;
+            });
+            
+            select.innerHTML = html;
+        }
+        
+        function aplicarFiltros() {
+            const busqueda = document.getElementById('search-input').value.toLowerCase();
+            const tramiteFiltro = document.getElementById('filter-tramite').value;
+            const orden = document.getElementById('sort-order').value;
+            
+            // Aplicar filtros
+            registrosFiltrados = todosLosRegistros.filter(reg => {
+                // Filtro de año
+                if (filtroAnio !== 'todos' && reg.anio !== filtroAnio) {
+                    return false;
+                }
+                
+                // Filtro de trámite
+                if (tramiteFiltro && reg.homoclave !== tramiteFiltro) {
+                    return false;
+                }
+                
+                // Filtro de búsqueda
+                if (busqueda) {
+                    const textoCompleto = `${reg.determinante} ${reg.asunto} ${reg.homoclave || ''} ${reg.bitacora_referencia || ''}`.toLowerCase();
+                    if (!textoCompleto.includes(busqueda)) {
+                        return false;
+                    }
+                }
+                
+                return true;
+            });
+            
+            // Ordenar
+            registrosFiltrados.sort((a, b) => {
+                const fechaA = new Date(a.fecha);
+                const fechaB = new Date(b.fecha);
+                return orden === 'desc' ? fechaB - fechaA : fechaA - fechaB;
+            });
+            
+            // Actualizar subtítulo
+            let subtitle = `${registrosFiltrados.length} registros`;
+            if (filtroAnio !== 'todos') {
+                subtitle += ` del año ${filtroAnio}`;
+            }
+            document.getElementById('subtitle-registros').textContent = subtitle;
+            
+            paginaActual = 1;
+            renderizarTabla();
+        }
+        
+        function cambiarItemsPorPagina() {
+            const valor = document.getElementById('items-per-page').value;
+            itemsPorPagina = valor === 'all' ? registrosFiltrados.length : parseInt(valor);
+            paginaActual = 1;
+            renderizarTabla();
+        }
+        
+        function cambiarPagina(direccion) {
+            const totalPaginas = Math.ceil(registrosFiltrados.length / itemsPorPagina);
+            paginaActual = Math.max(1, Math.min(totalPaginas, paginaActual + direccion));
+            renderizarTabla();
+        }
+        
+        function irAPagina(pagina) {
+            paginaActual = pagina;
+            renderizarTabla();
+        }
+        
+        function irAPaginaFinal() {
+            const totalPaginas = Math.ceil(registrosFiltrados.length / itemsPorPagina);
+            paginaActual = totalPaginas;
+            renderizarTabla();
+        }
+        
+        // FUNCIONES DE RENDERIZADO
+        
         function renderizarTodo() {
             renderizarCatalogo();
             renderizarSelector();
-            renderizarTabla();
+            aplicarFiltros();
             actualizarEstadisticas();
+            actualizarFiltrosAnio();
+            actualizarFiltroTramites();
         }
         
         function renderizarCatalogo() {
             const cat = obtenerCatalogo();
             const lista = document.getElementById('catalogo-list');
+            document.getElementById('count-tramites').textContent = cat.length;
             
             if (cat.length === 0) {
                 lista.innerHTML = '<p class="text-xs text-slate-500 italic text-center py-2">Sin trámites</p>';
@@ -1183,23 +1408,28 @@
         }
         
         function renderizarTabla() {
-            const regs = obtenerRegistros();
             const tbody = document.getElementById('table-body');
             
-            if (regs.length === 0) {
+            if (registrosFiltrados.length === 0) {
                 tbody.innerHTML = `
                     <tr>
                         <td colspan="3" class="p-12 text-center text-slate-400">
                             <i class="fas fa-inbox text-5xl mb-3 opacity-50"></i>
-                            <p class="font-semibold">No hay registros</p>
+                            <p class="font-semibold">No hay registros que coincidan con los filtros</p>
                         </td>
                     </tr>
                 `;
+                document.getElementById('pagination-controls').style.display = 'none';
                 return;
             }
             
-            tbody.innerHTML = [...regs].reverse().map((r, i) => {
-                const idx = regs.length - 1 - i;
+            // Calcular paginación
+            const totalPaginas = Math.ceil(registrosFiltrados.length / itemsPorPagina);
+            const inicio = (paginaActual - 1) * itemsPorPagina;
+            const fin = Math.min(inicio + itemsPorPagina, registrosFiltrados.length);
+            const registrosPagina = registrosFiltrados.slice(inicio, fin);
+            
+            tbody.innerHTML = registrosPagina.map(r => {
                 const fecha = new Date(r.fecha).toLocaleDateString('es-MX', {
                     day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
                 });
@@ -1224,15 +1454,15 @@
                         </td>
                         <td class="p-4">
                             <div class="flex items-center justify-center gap-1">
-                                <button onclick="verDetalle(${idx})" class="btn-action p-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg" title="Ver">
+                                <button onclick="verDetalle('${r.determinante}')" class="btn-action p-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg" title="Ver">
                                     <i class="fas fa-eye"></i>
                                 </button>
                                 ${(!r.sincronizado && !r.bloqueado) ? 
-                                    `<button onclick="eliminar(${idx})" class="btn-action p-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg" title="Eliminar">
+                                    `<button onclick="eliminarRegistro('${r.determinante}')" class="btn-action p-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg" title="Eliminar">
                                         <i class="fas fa-trash"></i>
                                     </button>` :
                                     '<span class="text-slate-400 text-xs px-2" title="Protegido"><i class="fas fa-lock"></i></span>'}
-                                <button onclick="duplicarRegistro(${idx})" class="btn-action p-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg" title="Duplicar">
+                                <button onclick="duplicarRegistro('${r.determinante}')" class="btn-action p-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg" title="Duplicar">
                                     <i class="fas fa-copy"></i>
                                 </button>
                             </div>
@@ -1240,76 +1470,119 @@
                     </tr>
                 `;
             }).join('');
+            
+            // Actualizar controles de paginación
+            if (totalPaginas > 1) {
+                document.getElementById('pagination-controls').style.display = 'flex';
+                document.getElementById('current-page').textContent = paginaActual;
+                document.getElementById('total-pages').textContent = totalPaginas;
+                
+                // Deshabilitar botones según corresponda
+                const btnPrev = document.querySelector('.pagination-controls button:nth-child(2)');
+                const btnNext = document.querySelector('.pagination-controls button:nth-child(4)');
+                btnPrev.disabled = paginaActual === 1;
+                btnNext.disabled = paginaActual === totalPaginas;
+            } else {
+                document.getElementById('pagination-controls').style.display = 'none';
+            }
         }
         
         function actualizarEstadisticas() {
-            const regs = obtenerRegistros();
-            const cat = obtenerCatalogo();
+            const ahora = new Date();
+            const semanaAtras = new Date(ahora.getTime() - 7 * 24 * 60 * 60 * 1000);
+            const mesAtras = new Date(ahora.getFullYear(), ahora.getMonth() - 1, ahora.getDate());
+            const anioActual = ahora.getFullYear();
             
-            document.getElementById('stat-total').textContent = regs.length;
-            document.getElementById('stat-sincronizados').textContent = regs.filter(r => r.sincronizado).length;
-            document.getElementById('stat-pendientes').textContent = regs.filter(r => !r.sincronizado).length;
-            document.getElementById('stat-tramites').textContent = cat.length;
+            const sincronizados = todosLosRegistros.filter(r => r.sincronizado).length;
+            const pendientes = todosLosRegistros.filter(r => !r.sincronizado).length;
+            const semana = todosLosRegistros.filter(r => new Date(r.fecha) >= semanaAtras).length;
+            const mes = todosLosRegistros.filter(r => new Date(r.fecha) >= mesAtras).length;
+            const anio = todosLosRegistros.filter(r => r.anio === anioActual).length;
             
-            const semanaAtras = new Date();
-            semanaAtras.setDate(semanaAtras.getDate() - 7);
-            document.getElementById('stat-semana').textContent = regs.filter(r => new Date(r.fecha) >= semanaAtras).length;
-        }
-        
-        function buscarEnTabla() {
-            const busqueda = document.getElementById('search-input').value.toLowerCase();
-            document.querySelectorAll('#table-body tr').forEach(fila => {
-                fila.style.display = fila.textContent.toLowerCase().includes(busqueda) ? '' : 'none';
-            });
+            document.getElementById('stat-total').textContent = todosLosRegistros.length;
+            document.getElementById('stat-nube').textContent = sincronizados;
+            document.getElementById('stat-pendientes').textContent = pendientes;
+            document.getElementById('stat-semana').textContent = semana;
+            document.getElementById('stat-mes').textContent = mes;
+            document.getElementById('stat-anio').textContent = anio;
+            document.getElementById('memory-count').textContent = todosLosRegistros.length;
         }
         
         function exportarCSV() {
-            const regs = obtenerRegistros();
-            if (regs.length === 0) {
-                mostrarAlerta('info', 'No hay datos');
+            if (registrosFiltrados.length === 0) {
+                mostrarAlerta('info', 'No hay datos para exportar');
                 return;
             }
             
-            let csv = 'Determinante,Consecutivo,Año,Área,Homoclave,Bitácora,Asunto,Fecha,Sincronizado\n';
-            csv += regs.map(r => 
-                `"${r.determinante}",${r.consecutivo},${r.anio},"${r.area_siglas}","${r.homoclave || ''}","${r.bitacora_referencia || ''}","${r.asunto.replace(/"/g, '""')}","${r.fecha}",${r.sincronizado ? 'Si' : 'No'}`
+            let csv = 'Determinante,Consecutivo,Año,Área,Homoclave,Bitácora,Asunto,Fecha,Estado\n';
+            csv += registrosFiltrados.map(r => 
+                `"${r.determinante}",${r.consecutivo},${r.anio},"${r.area_siglas}","${r.homoclave || ''}","${r.bitacora_referencia || ''}","${r.asunto.replace(/"/g, '""')}","${r.fecha}","${r.sincronizado ? 'Sincronizado' : 'Pendiente'}"`
             ).join('\n');
             
-            const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
+            const blob = new Blob(['\ufeff' + csv], {type: 'text/csv;charset=utf-8;'});
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
             link.download = `Export_${AREA_SIGLAS}_${new Date().toISOString().split('T')[0]}.csv`;
             link.click();
-            mostrarAlerta('success', 'CSV exportado');
+            mostrarAlerta('success', `${registrosFiltrados.length} registros exportados`);
         }
         
         function imprimirTabla() {
             window.print();
         }
         
+        function limpiarCache() {
+            if (!confirm('¿Está seguro de limpiar toda la caché local?\n\nEsto eliminará:\n- Todos los registros cargados en memoria\n- Configuración de filtros\n\nLos registros pendientes de sincronizar se mantendrán seguros.')) {
+                return;
+            }
+            
+            // Solo limpiar registros en memoria, mantener pendientes
+            todosLosRegistros = [...registrosPendientes];
+            registrosFiltrados = [];
+            paginaActual = 1;
+            filtroAnio = 'todos';
+            
+            renderizarTodo();
+            mostrarAlerta('success', 'Caché limpiada. Los registros pendientes se mantuvieron.');
+        }
+        
         function actualizarFecha() {
             const fecha = new Date().toLocaleString('es-MX', {day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'});
             document.getElementById('last-update').textContent = fecha;
-            try {
-                localStorage.setItem(LS_ULTIMA_ACT, fecha);
-            } catch(e) {}
         }
         
-        function mostrarCargando(mostrar) {
+        function actualizarUltimaSincronizacion() {
+            try {
+                const ultimaSync = localStorage.getItem(LS_ULTIMA_SYNC);
+                if (ultimaSync) {
+                    document.getElementById('last-sync').textContent = ultimaSync;
+                } else {
+                    document.getElementById('last-sync').textContent = '--';
+                }
+                
+                // Guardar nueva fecha de sincronización
+                const fecha = new Date().toLocaleString('es-MX', {day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'});
+                localStorage.setItem(LS_ULTIMA_SYNC, fecha);
+            } catch(e) {
+                console.error("Error al actualizar última sincronización:", e);
+            }
+        }
+        
+        function mostrarCargando(mostrar, mensaje = 'Cargando...') {
             let overlay = document.getElementById('loading-overlay');
             if (mostrar) {
                 if (!overlay) {
                     overlay = document.createElement('div');
                     overlay.id = 'loading-overlay';
                     overlay.className = 'loading-overlay';
-                    overlay.innerHTML = `
-                        <div class="text-center">
-                            <div class="spinner mx-auto mb-4"></div>
-                            <p class="text-white font-bold text-lg">Cargando...</p>
-                        </div>
-                    `;
                     document.body.appendChild(overlay);
                 }
+                overlay.innerHTML = `
+                    <div class="text-center">
+                        <div class="spinner mx-auto mb-4"></div>
+                        <p class="text-white font-bold text-lg">${mensaje}</p>
+                    </div>
+                `;
             } else {
                 if (overlay) overlay.remove();
             }
