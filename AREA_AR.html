@@ -103,6 +103,17 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .folio-preview {
+            background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+            padding: 1rem;
+            border-radius: 0.75rem;
+            text-align: center;
+            color: white;
+            font-weight: bold;
+            font-size: 1.1rem;
+            font-family: 'Courier New', monospace;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+        }
     </style>
 </head>
 <body class="bg-slate-50">
@@ -223,6 +234,12 @@
                 </div>
                 
                 <div class="p-6 space-y-4">
+                    <!-- Preview del próximo folio -->
+                    <div id="folio-preview" class="folio-preview">
+                        <div class="text-xs opacity-75 mb-1">PRÓXIMO FOLIO</div>
+                        <div id="folio-text">Cargando...</div>
+                    </div>
+
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
                             <label class="block text-xs font-bold text-slate-700 mb-2 uppercase tracking-wide">
@@ -387,7 +404,7 @@
                         <span class="font-semibold text-slate-600">
                             <i class="fas fa-map-marker-alt text-emerald-600 mr-2"></i>Área
                         </span>
-                        <span class="font-bold text-slate-800">VO</span>
+                        <span class="font-bold text-slate-800">AR</span>
                     </div>
                     <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                         <span class="font-semibold text-slate-600">
@@ -405,7 +422,7 @@
                         <span class="font-semibold text-slate-600">
                             <i class="fas fa-shield-alt text-emerald-600 mr-2"></i>Versión
                         </span>
-                        <span class="font-mono text-slate-700">2.1.0</span>
+                        <span class="font-mono text-slate-700">2.2.0</span>
                     </div>
                 </div>
             </div>
@@ -438,13 +455,15 @@
         
         let _sb = null;
         let conectado = false;
+        let ultimoConsecutivoNube = 0; // Variable para almacenar el último consecutivo de la nube
         
         const LS_CATALOGO = `cat_${AREA_SIGLAS}`;
         const LS_REGISTROS = `reg_${AREA_SIGLAS}`;
         const LS_ULTIMA_ACT = `upd_${AREA_SIGLAS}`;
+        const LS_ULTIMO_CONSECUTIVO = `cons_${AREA_SIGLAS}`;
         
         // Límites de almacenamiento
-        const MAX_REGISTROS_LOCAL = 100; // Solo mantener últimos 100 registros localmente
+        const MAX_REGISTROS_LOCAL = 100;
         
         window.onload = async function() {
             console.log("=== INICIALIZANDO ÁREA: " + AREA_SIGLAS + " ===");
@@ -467,16 +486,106 @@
             verificarEspacioStorage();
             inicializarStorage();
             configurarContador();
-            renderizarTodo();
+            
             await verificarConexion();
             
             if (conectado) {
+                await cargarUltimoConsecutivoNube();
                 await cargarDatosDesdeNube();
             }
             
+            renderizarTodo();
+            actualizarVistaProximoFolio();
             actualizarFecha();
             console.log("✓ Sistema inicializado");
         };
+        
+        // Nueva función para cargar el último consecutivo desde Supabase
+        async function cargarUltimoConsecutivoNube() {
+            if (!conectado) {
+                console.log("⚠ Sin conexión - usando consecutivo local");
+                cargarUltimoConsecutivoLocal();
+                return;
+            }
+            
+            try {
+                const anio = new Date().getFullYear();
+                
+                const { data, error } = await _sb
+                    .from('registro_oficios')
+                    .select('consecutivo')
+                    .eq('area_siglas', AREA_SIGLAS)
+                    .eq('anio', anio)
+                    .order('consecutivo', { ascending: false })
+                    .limit(1)
+                    .maybeSingle();
+                
+                if (error && error.code !== 'PGRST116') { // PGRST116 = no rows
+                    throw error;
+                }
+                
+                if (data) {
+                    ultimoConsecutivoNube = data.consecutivo;
+                    console.log(`✓ Último consecutivo en nube: ${ultimoConsecutivoNube}`);
+                    
+                    // Guardar en localStorage para modo offline
+                    try {
+                        localStorage.setItem(LS_ULTIMO_CONSECUTIVO, ultimoConsecutivoNube.toString());
+                    } catch(e) {
+                        console.error("Error al guardar consecutivo:", e);
+                    }
+                } else {
+                    ultimoConsecutivoNube = 0;
+                    console.log("✓ No hay registros previos en nube para este año");
+                }
+            } catch (e) {
+                console.error("✗ Error al cargar consecutivo:", e);
+                mostrarAlerta('warning', 'No se pudo obtener el último folio. Usando modo local.');
+                cargarUltimoConsecutivoLocal();
+            }
+        }
+        
+        // Función auxiliar para cargar consecutivo desde localStorage
+        function cargarUltimoConsecutivoLocal() {
+            try {
+                const guardado = localStorage.getItem(LS_ULTIMO_CONSECUTIVO);
+                ultimoConsecutivoNube = guardado ? parseInt(guardado) : 0;
+                console.log(`⚠ Usando consecutivo local: ${ultimoConsecutivoNube}`);
+            } catch(e) {
+                ultimoConsecutivoNube = 0;
+            }
+        }
+        
+        // Función para obtener el próximo consecutivo disponible
+        function obtenerProximoConsecutivo() {
+            const regs = obtenerRegistros();
+            const anio = new Date().getFullYear();
+            
+            // Obtener el máximo consecutivo local del año actual
+            const regsDelAnio = regs.filter(r => r.anio === anio);
+            const maxConsecutivoLocal = regsDelAnio.length > 0 
+                ? Math.max(...regsDelAnio.map(r => r.consecutivo))
+                : 0;
+            
+            // Usar el máximo entre el consecutivo de la nube y el local
+            const maxConsecutivo = Math.max(ultimoConsecutivoNube, maxConsecutivoLocal);
+            
+            console.log(`Consecutivos - Nube: ${ultimoConsecutivoNube}, Local: ${maxConsecutivoLocal}, Próximo: ${maxConsecutivo + 1}`);
+            
+            return maxConsecutivo + 1;
+        }
+        
+        // Función para actualizar la vista del próximo folio
+        function actualizarVistaProximoFolio() {
+            const proximoConsecutivo = obtenerProximoConsecutivo();
+            const anio = new Date().getFullYear();
+            const proximoFolio = `OR-130/${AREA_SIGLAS}/${String(proximoConsecutivo).padStart(4, '0')}/${anio}`;
+            
+            const folioElement = document.getElementById('folio-text');
+            if (folioElement) {
+                folioElement.textContent = proximoFolio;
+            }
+        }
         
         function verificarEspacioStorage() {
             try {
@@ -590,7 +699,6 @@
         
         function guardarRegistros(regs) {
             try {
-                // Limitar registros locales si exceden el máximo
                 if (regs.length > MAX_REGISTROS_LOCAL) {
                     const pendientes = regs.filter(r => !r.sincronizado);
                     const sincronizados = regs.filter(r => r.sincronizado)
@@ -652,6 +760,10 @@
                 text.textContent = "Conectado";
                 mostrarAlerta('success', 'Conexión exitosa');
                 console.log("✓ Conexión OK");
+                
+                // Recargar consecutivo desde la nube
+                await cargarUltimoConsecutivoNube();
+                actualizarVistaProximoFolio();
             } catch (e) {
                 conectado = false;
                 dot.className = "status-dot bg-red-500";
@@ -728,7 +840,7 @@
             }
         }
         
-        function registrarLocal() {
+        async function registrarLocal() {
             const asunto = document.getElementById('txt-asunto').value.trim();
             const bitacora = document.getElementById('txt-bitacora').value.trim();
             const tramite = document.getElementById('sel-tramite').value;
@@ -742,10 +854,21 @@
                 return;
             }
             
-            let regs = obtenerRegistros();
+            // Si hay conexión, recargar el consecutivo antes de crear el registro
+            if (conectado) {
+                mostrarCargando(true);
+                try {
+                    await cargarUltimoConsecutivoNube();
+                } catch(e) {
+                    console.error("Error al actualizar consecutivo:", e);
+                    // Continuar con el consecutivo local si falla
+                } finally {
+                    mostrarCargando(false);
+                }
+            }
+            
             const anio = new Date().getFullYear();
-            const regsDelAnio = regs.filter(r => r.anio === anio);
-            const consecutivo = regsDelAnio.length + 1;
+            const consecutivo = obtenerProximoConsecutivo();
             const determinante = `OR-130/${AREA_SIGLAS}/${String(consecutivo).padStart(4, '0')}/${anio}`;
             
             const nuevo = {
@@ -762,11 +885,31 @@
                 bloqueado: false
             };
             
+            let regs = obtenerRegistros();
             regs.push(nuevo);
+            
             if (guardarRegistros(regs)) {
+                // Actualizar el último consecutivo local
+                ultimoConsecutivoNube = Math.max(ultimoConsecutivoNube, consecutivo);
+                try {
+                    localStorage.setItem(LS_ULTIMO_CONSECUTIVO, ultimoConsecutivoNube.toString());
+                } catch(e) {
+                    console.error("Error al actualizar consecutivo local:", e);
+                }
+                
                 limpiarFormulario();
                 renderizarTodo();
-                mostrarAlerta('success', 'Determinante: ' + determinante);
+                actualizarVistaProximoFolio();
+                mostrarAlerta('success', 'Determinante creado: ' + determinante);
+                
+                // Sugerir sincronización si hay conexión
+                if (conectado) {
+                    setTimeout(() => {
+                        if (confirm('¿Desea sincronizar este registro con la nube ahora?')) {
+                            sincronizarConNube();
+                        }
+                    }, 1000);
+                }
             }
         }
         
@@ -795,6 +938,9 @@
             mostrarCargando(true);
             
             try {
+                // Recargar consecutivo antes de sincronizar
+                await cargarUltimoConsecutivoNube();
+                
                 const datos = pend.map(r => ({
                     determinante: r.determinante,
                     consecutivo: r.consecutivo,
@@ -815,9 +961,13 @@
                 regs = regs.map(r => !r.sincronizado ? {...r, sincronizado: true, bloqueado: true} : r);
                 guardarRegistros(regs);
                 
+                // Actualizar consecutivo después de sincronizar
+                await cargarUltimoConsecutivoNube();
+                
                 await sincronizarCatalogoConNube();
                 
                 renderizarTodo();
+                actualizarVistaProximoFolio();
                 mostrarAlerta('success', `${pend.length} registros sincronizados`);
             } catch (e) {
                 console.error("Error sync:", e);
@@ -865,13 +1015,15 @@
             mostrarCargando(true);
             
             try {
+                await cargarUltimoConsecutivoNube();
                 await cargarRegistrosDesdeNube();
                 await cargarCatalogoDesdeNube();
                 renderizarTodo();
-                mostrarAlerta('success', 'Datos actualizados');
+                actualizarVistaProximoFolio();
+                mostrarAlerta('success', 'Datos actualizados desde la nube');
             } catch (error) {
                 console.error("Error cargar:", error);
-                mostrarAlerta('warning', 'Error: ' + error.message);
+                mostrarAlerta('warning', 'Error al cargar: ' + error.message);
             } finally {
                 mostrarCargando(false);
             }
@@ -927,6 +1079,7 @@
             regs.splice(idx, 1);
             if (guardarRegistros(regs)) {
                 renderizarTodo();
+                actualizarVistaProximoFolio();
                 mostrarAlerta('success', 'Eliminado');
             }
         }
@@ -987,7 +1140,7 @@
             document.getElementById('txt-asunto').value = reg.asunto;
             document.getElementById('char-count').textContent = reg.asunto.length + '/500';
             window.scrollTo({top: 0, behavior: 'smooth'});
-            mostrarAlerta('info', 'Registro duplicado');
+            mostrarAlerta('info', 'Registro duplicado - se generará nuevo folio al guardar');
         }
         
         function renderizarTodo() {
