@@ -111,7 +111,7 @@
         <div class="container mx-auto">
             <div class="flex justify-between items-center flex-wrap gap-4">
                 <div class="flex items-center gap-4">
-                 -🌲-
+                    <span class="text-4xl">🌲</span>
                     <div>
                         <h1 class="text-xl font-bold tracking-tight">Unidad de Aprovechamientos y Recursos Forestales</h1>
                         <p class="text-xs text-emerald-200">Control de Determinantes 2026</p>
@@ -133,6 +133,10 @@
                     <button onclick="exportarCSV()" 
                             class="bg-blue-600 hover:bg-blue-700 px-4 py-2 rounded-lg text-xs font-bold shadow-lg transition">
                         <i class="fas fa-file-csv"></i> EXPORTAR
+                    </button>
+                    <button onclick="limpiarAlmacenamiento()" 
+                            class="bg-orange-600 hover:bg-orange-700 px-4 py-2 rounded-lg text-xs font-bold shadow-lg transition">
+                        <i class="fas fa-broom"></i> LIMPIAR
                     </button>
                     <button onclick="probarConexion()" 
                             class="bg-indigo-600 hover:bg-indigo-700 px-4 py-2 rounded-lg text-xs font-bold shadow-lg transition">
@@ -383,7 +387,7 @@
                         <span class="font-semibold text-slate-600">
                             <i class="fas fa-map-marker-alt text-emerald-600 mr-2"></i>Área
                         </span>
-                        <span class="font-bold text-slate-800">VO - Unidad de Aprovechamientos y Recursos Forestales</span>
+                        <span class="font-bold text-slate-800">VO</span>
                     </div>
                     <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                         <span class="font-semibold text-slate-600">
@@ -393,17 +397,15 @@
                     </div>
                     <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                         <span class="font-semibold text-slate-600">
-                            <i class="fas fa-server text-emerald-600 mr-2"></i>Respaldo Local
+                            <i class="fas fa-database text-emerald-600 mr-2"></i>Uso Storage
                         </span>
-                        <span class="badge bg-emerald-100 text-emerald-800">
-                            <i class="fas fa-check-circle"></i> Activo
-                        </span>
+                        <span id="storage-usage" class="font-mono text-slate-700">0%</span>
                     </div>
                     <div class="flex items-center justify-between p-3 bg-slate-50 rounded-lg">
                         <span class="font-semibold text-slate-600">
                             <i class="fas fa-shield-alt text-emerald-600 mr-2"></i>Versión
                         </span>
-                        <span class="font-mono text-slate-700">2.0.0</span>
+                        <span class="font-mono text-slate-700">2.1.0</span>
                     </div>
                 </div>
             </div>
@@ -429,35 +431,187 @@
     </div>
 
     <script>
-        const AREA_SIGLAS = "AR";
+        const AREA_SIGLAS = "VO";
         const AREA_NOMBRE = "Unidad de Aprovechamientos y Recursos Forestales";
         const SB_URL = "https://rnwksmgwmnjatrgezaaa.supabase.co";
         const SB_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJud2tzbWd3bW5qYXRyZ2V6YWFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc5MTY1MTYsImV4cCI6MjA4MzQ5MjUxNn0.vQXfHnWRuCNOjbqX-iYragObPA9GyCw9z9RMsNLjEfE";
         
         let _sb = null;
         let conectado = false;
-        let registroEditando = null;
+        
+        const LS_CATALOGO = `cat_${AREA_SIGLAS}`;
+        const LS_REGISTROS = `reg_${AREA_SIGLAS}`;
+        const LS_ULTIMA_ACT = `upd_${AREA_SIGLAS}`;
+        
+        // Límites de almacenamiento
+        const MAX_REGISTROS_LOCAL = 100; // Solo mantener últimos 100 registros localmente
         
         window.onload = async function() {
             console.log("=== INICIALIZANDO ÁREA: " + AREA_SIGLAS + " ===");
+            
+            if (typeof supabase === 'undefined') {
+                console.error("✗ Supabase no cargado");
+                mostrarAlerta('error', 'Error: Librería no disponible');
+                return;
+            }
+            
             try {
-                _sb = supabase.createClient(SB_URL, SB_KEY);
+                const { createClient } = supabase;
+                _sb = createClient(SB_URL, SB_KEY);
                 console.log("✓ Cliente Supabase creado");
             } catch(e) {
                 console.error("✗ Error al crear cliente:", e);
+                mostrarAlerta('error', 'Error de inicialización: ' + e.message);
             }
             
-            inicializarCatalogo();
-            inicializarRegistros();
+            verificarEspacioStorage();
+            inicializarStorage();
             configurarContador();
             renderizarTodo();
             await verificarConexion();
-            await cargarDatosDesdeNube();
-            actualizarFecha();
             
-            setInterval(guardarRespaldoAutomatico, 60000);
+            if (conectado) {
+                await cargarDatosDesdeNube();
+            }
+            
+            actualizarFecha();
             console.log("✓ Sistema inicializado");
         };
+        
+        function verificarEspacioStorage() {
+            try {
+                const testKey = 'test_storage_' + Date.now();
+                const testData = 'x'.repeat(1000);
+                localStorage.setItem(testKey, testData);
+                localStorage.removeItem(testKey);
+                
+                let totalSize = 0;
+                for (let key in localStorage) {
+                    if (localStorage.hasOwnProperty(key)) {
+                        totalSize += localStorage[key].length + key.length;
+                    }
+                }
+                
+                const usagePercent = ((totalSize / (5 * 1024 * 1024)) * 100).toFixed(1);
+                document.getElementById('storage-usage').textContent = usagePercent + '%';
+                
+                if (usagePercent > 80) {
+                    mostrarAlerta('warning', 'Almacenamiento al ' + usagePercent + '%. Considere limpiar datos antiguos.');
+                }
+            } catch(e) {
+                console.error("Error al verificar storage:", e);
+                if (e.name === 'QuotaExceededError') {
+                    mostrarAlerta('error', 'Almacenamiento lleno. Use el botón LIMPIAR para liberar espacio.');
+                }
+            }
+        }
+        
+        function limpiarAlmacenamiento() {
+            if (!confirm('¿Desea limpiar registros sincronizados antiguos? Solo se mantendrán los últimos 50 registros sincronizados y todos los pendientes.')) {
+                return;
+            }
+            
+            try {
+                let regs = obtenerRegistros();
+                const pendientes = regs.filter(r => !r.sincronizado);
+                const sincronizados = regs.filter(r => r.sincronizado)
+                    .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+                    .slice(0, 50);
+                
+                const nuevosRegs = [...sincronizados, ...pendientes];
+                guardarRegistros(nuevosRegs);
+                
+                // Limpiar respaldos antiguos
+                for (let key in localStorage) {
+                    if (key.startsWith('respaldo_')) {
+                        localStorage.removeItem(key);
+                    }
+                }
+                
+                renderizarTodo();
+                verificarEspacioStorage();
+                mostrarAlerta('success', `Limpieza completada. ${regs.length - nuevosRegs.length} registros eliminados.`);
+            } catch(e) {
+                console.error("Error al limpiar:", e);
+                mostrarAlerta('error', 'Error al limpiar: ' + e.message);
+            }
+        }
+        
+        function inicializarStorage() {
+            try {
+                if (!localStorage.getItem(LS_CATALOGO)) {
+                    localStorage.setItem(LS_CATALOGO, JSON.stringify([]));
+                }
+                if (!localStorage.getItem(LS_REGISTROS)) {
+                    localStorage.setItem(LS_REGISTROS, JSON.stringify([]));
+                }
+                console.log("✓ Storage inicializado");
+            } catch(e) {
+                console.error("✗ Error al inicializar storage:", e);
+                if (e.name === 'QuotaExceededError') {
+                    mostrarAlerta('error', 'Almacenamiento lleno. Sincronice y limpie datos antiguos.');
+                }
+            }
+        }
+        
+        function obtenerCatalogo() {
+            try {
+                const data = localStorage.getItem(LS_CATALOGO);
+                return data ? JSON.parse(data) : [];
+            } catch(e) {
+                console.error("Error al leer catálogo:", e);
+                return [];
+            }
+        }
+        
+        function guardarCatalogo(cat) {
+            try {
+                localStorage.setItem(LS_CATALOGO, JSON.stringify(cat));
+                actualizarFecha();
+                return true;
+            } catch(e) {
+                console.error("Error al guardar catálogo:", e);
+                if (e.name === 'QuotaExceededError') {
+                    mostrarAlerta('error', 'Almacenamiento lleno. No se pudo guardar.');
+                }
+                return false;
+            }
+        }
+        
+        function obtenerRegistros() {
+            try {
+                const data = localStorage.getItem(LS_REGISTROS);
+                return data ? JSON.parse(data) : [];
+            } catch(e) {
+                console.error("Error al leer registros:", e);
+                return [];
+            }
+        }
+        
+        function guardarRegistros(regs) {
+            try {
+                // Limitar registros locales si exceden el máximo
+                if (regs.length > MAX_REGISTROS_LOCAL) {
+                    const pendientes = regs.filter(r => !r.sincronizado);
+                    const sincronizados = regs.filter(r => r.sincronizado)
+                        .sort((a, b) => new Date(b.fecha) - new Date(a.fecha))
+                        .slice(0, MAX_REGISTROS_LOCAL - pendientes.length);
+                    regs = [...sincronizados, ...pendientes];
+                }
+                
+                localStorage.setItem(LS_REGISTROS, JSON.stringify(regs));
+                actualizarFecha();
+                verificarEspacioStorage();
+                return true;
+            } catch(e) {
+                console.error("Error al guardar registros:", e);
+                if (e.name === 'QuotaExceededError') {
+                    mostrarAlerta('error', 'Almacenamiento lleno. Sincronice datos con la nube y use LIMPIAR.');
+                    return false;
+                }
+                return false;
+            }
+        }
         
         function configurarContador() {
             const textarea = document.getElementById('txt-asunto');
@@ -465,13 +619,9 @@
             textarea.addEventListener('input', function() {
                 const len = this.value.length;
                 counter.textContent = len + '/500';
-                if (len > 500) {
-                    counter.className = 'text-[10px] text-red-600 font-bold';
-                } else if (len > 450) {
-                    counter.className = 'text-[10px] text-amber-600 font-bold';
-                } else {
-                    counter.className = 'text-[10px] text-slate-500 font-bold';
-                }
+                counter.className = len > 500 ? 'text-[10px] text-red-600 font-bold' :
+                                   len > 450 ? 'text-[10px] text-amber-600 font-bold' :
+                                   'text-[10px] text-slate-500 font-bold';
             });
         }
         
@@ -482,29 +632,53 @@
             text.textContent = "Probando...";
             mostrarAlerta('info', 'Probando conexión...');
             
+            if (!_sb) {
+                mostrarAlerta('error', 'Cliente no inicializado');
+                dot.className = "status-dot bg-red-500";
+                text.textContent = "Error";
+                return;
+            }
+            
             try {
-                const result = await _sb.from('registro_oficios').select('id').limit(1);
-                if (result.error) throw result.error;
+                const { data, error } = await _sb
+                    .from('registro_oficios')
+                    .select('id')
+                    .limit(1);
+                
+                if (error) throw error;
+                
                 conectado = true;
                 dot.className = "status-dot bg-emerald-500 animate-pulse-dot";
                 text.textContent = "Conectado";
-                mostrarAlerta('success', 'Conexión exitosa con la base de datos');
-                console.log("✓ Conexión exitosa");
+                mostrarAlerta('success', 'Conexión exitosa');
+                console.log("✓ Conexión OK");
             } catch (e) {
                 conectado = false;
                 dot.className = "status-dot bg-red-500";
                 text.textContent = "Sin conexión";
-                mostrarAlerta('error', 'Error de conexión: ' + e.message);
-                console.error("✗ Error de conexión:", e);
+                mostrarAlerta('error', 'Error: ' + e.message);
+                console.error("✗ Error:", e);
             }
         }
         
         async function verificarConexion() {
             const dot = document.getElementById('dot');
             const text = document.getElementById('status-text');
+            
+            if (!_sb) {
+                conectado = false;
+                dot.className = "status-dot bg-red-500";
+                text.textContent = "Sin Cliente";
+                return;
+            }
+            
             try {
-                const result = await _sb.from('registro_oficios').select('id').limit(1);
-                if (!result.error) {
+                const { error } = await _sb
+                    .from('registro_oficios')
+                    .select('id')
+                    .limit(1);
+                
+                if (!error) {
                     conectado = true;
                     dot.className = "status-dot bg-emerald-500 animate-pulse-dot";
                     text.textContent = "Conectado";
@@ -520,62 +694,38 @@
             }
         }
         
-        function inicializarCatalogo() {
-            if (!localStorage.getItem('cat_' + AREA_SIGLAS)) {
-                localStorage.setItem('cat_' + AREA_SIGLAS, JSON.stringify([]));
-            }
-        }
-        
-        function inicializarRegistros() {
-            if (!localStorage.getItem('reg_' + AREA_SIGLAS)) {
-                localStorage.setItem('reg_' + AREA_SIGLAS, JSON.stringify([]));
-            }
-        }
-        
-        function obtenerCatalogo() {
-            return JSON.parse(localStorage.getItem('cat_' + AREA_SIGLAS) || "[]");
-        }
-        
-        function guardarCatalogo(cat) {
-            localStorage.setItem('cat_' + AREA_SIGLAS, JSON.stringify(cat));
-        }
-        
         function agregarCatalogo() {
             const h = document.getElementById('new-hc').value.trim();
             const n = document.getElementById('new-name').value.trim();
+            
             if (!h || !n) {
                 mostrarAlerta('error', 'Complete ambos campos');
                 return;
             }
+            
             let cat = obtenerCatalogo();
-            if (cat.some(function(c) { return c.h === h; })) {
-                mostrarAlerta('error', 'La homoclave ya existe');
+            if (cat.some(c => c.h === h)) {
+                mostrarAlerta('error', 'Homoclave ya existe');
                 return;
             }
-            cat.push({h: h, n: n});
-            guardarCatalogo(cat);
-            document.getElementById('new-hc').value = '';
-            document.getElementById('new-name').value = '';
-            renderizarTodo();
-            mostrarAlerta('success', 'Trámite agregado al catálogo');
+            
+            cat.push({h, n});
+            if (guardarCatalogo(cat)) {
+                document.getElementById('new-hc').value = '';
+                document.getElementById('new-name').value = '';
+                renderizarTodo();
+                mostrarAlerta('success', 'Trámite agregado');
+            }
         }
         
         function eliminarDelCatalogo(homoclave) {
-            if (!confirm('¿Eliminar este trámite del catálogo?')) return;
-            let cat = obtenerCatalogo();
-            cat = cat.filter(function(c) { return c.h !== homoclave; });
-            guardarCatalogo(cat);
-            renderizarTodo();
-            mostrarAlerta('success', 'Trámite eliminado del catálogo');
-        }
-        
-        function obtenerRegistros() {
-            return JSON.parse(localStorage.getItem('reg_' + AREA_SIGLAS) || "[]");
-        }
-        
-        function guardarRegistros(regs) {
-            localStorage.setItem('reg_' + AREA_SIGLAS, JSON.stringify(regs));
-            actualizarFecha();
+            if (!confirm('¿Eliminar este trámite?')) return;
+            
+            let cat = obtenerCatalogo().filter(c => c.h !== homoclave);
+            if (guardarCatalogo(cat)) {
+                renderizarTodo();
+                mostrarAlerta('success', 'Trámite eliminado');
+            }
         }
         
         function registrarLocal() {
@@ -594,28 +744,30 @@
             
             let regs = obtenerRegistros();
             const anio = new Date().getFullYear();
-            const regsDelAnio = regs.filter(function(r) { return r.anio === anio; });
+            const regsDelAnio = regs.filter(r => r.anio === anio);
             const consecutivo = regsDelAnio.length + 1;
-            const determinante = 'OR-130/' + AREA_SIGLAS + '/' + String(consecutivo).padStart(4, '0') + '/' + anio;
+            const determinante = `OR-130/${AREA_SIGLAS}/${String(consecutivo).padStart(4, '0')}/${anio}`;
             
-            const nuevoRegistro = {
-                determinante: determinante,
-                consecutivo: consecutivo,
-                anio: anio,
+            const nuevo = {
+                id: Date.now().toString(),
+                determinante,
+                consecutivo,
+                anio,
                 area_siglas: AREA_SIGLAS,
                 homoclave: tramite,
                 bitacora_referencia: bitacora,
-                asunto: asunto,
+                asunto,
                 fecha: new Date().toISOString(),
                 sincronizado: false,
                 bloqueado: false
             };
             
-            regs.push(nuevoRegistro);
-            guardarRegistros(regs);
-            limpiarFormulario();
-            renderizarTodo();
-            mostrarAlerta('success', 'Determinante generado: ' + determinante);
+            regs.push(nuevo);
+            if (guardarRegistros(regs)) {
+                limpiarFormulario();
+                renderizarTodo();
+                mostrarAlerta('success', 'Determinante: ' + determinante);
+            }
         }
         
         function limpiarFormulario() {
@@ -623,59 +775,53 @@
             document.getElementById('txt-bitacora').value = '';
             document.getElementById('sel-tramite').value = '';
             document.getElementById('char-count').textContent = '0/500';
+            document.getElementById('char-count').className = 'text-[10px] text-slate-500 font-bold';
         }
         
         async function sincronizarConNube() {
             if (!conectado) {
-                mostrarAlerta('error', 'No hay conexión con la base de datos');
+                mostrarAlerta('error', 'No hay conexión');
                 return;
             }
             
             let regs = obtenerRegistros();
-            const pend = regs.filter(function(r) { return !r.sincronizado; });
+            const pend = regs.filter(r => !r.sincronizado);
             
             if (pend.length === 0) {
-                mostrarAlerta('info', 'No hay registros pendientes de sincronizar');
+                mostrarAlerta('info', 'No hay registros pendientes');
                 return;
             }
             
             mostrarCargando(true);
-            mostrarAlerta('info', 'Sincronizando ' + pend.length + ' registros...');
             
             try {
-                const datos = pend.map(function(r) {
-                    return {
-                        determinante: r.determinante,
-                        consecutivo: r.consecutivo,
-                        anio: r.anio,
-                        area_siglas: r.area_siglas,
-                        homoclave: r.homoclave,
-                        bitacora_referencia: r.bitacora_referencia,
-                        asunto: r.asunto,
-                        fecha: r.fecha
-                    };
-                });
+                const datos = pend.map(r => ({
+                    determinante: r.determinante,
+                    consecutivo: r.consecutivo,
+                    anio: r.anio,
+                    area_siglas: r.area_siglas,
+                    homoclave: r.homoclave || null,
+                    bitacora_referencia: r.bitacora_referencia || null,
+                    asunto: r.asunto,
+                    fecha: r.fecha
+                }));
                 
-                const result = await _sb.from('registro_oficios').insert(datos);
-                if (result.error) throw result.error;
+                const { error } = await _sb
+                    .from('registro_oficios')
+                    .insert(datos);
                 
-                regs = regs.map(function(r) {
-                    if (!r.sincronizado) {
-                        return Object.assign({}, r, {sincronizado: true, bloqueado: true});
-                    }
-                    return r;
-                });
+                if (error) throw error;
                 
+                regs = regs.map(r => !r.sincronizado ? {...r, sincronizado: true, bloqueado: true} : r);
                 guardarRegistros(regs);
                 
                 await sincronizarCatalogoConNube();
                 
                 renderizarTodo();
-                mostrarAlerta('success', pend.length + ' registros sincronizados correctamente');
-                console.log("✓ Sincronización exitosa");
+                mostrarAlerta('success', `${pend.length} registros sincronizados`);
             } catch (e) {
-                console.error("✗ Error de sincronización:", e);
-                mostrarAlerta('error', 'Error al sincronizar: ' + e.message);
+                console.error("Error sync:", e);
+                mostrarAlerta('error', 'Error: ' + e.message);
             } finally {
                 mostrarCargando(false);
             }
@@ -689,14 +835,14 @@
             
             try {
                 for (let item of cat) {
-                    const { data: existe } = await _sb
+                    const { data } = await _sb
                         .from('catalogo_tramites')
                         .select('homoclave')
                         .eq('area_siglas', AREA_SIGLAS)
                         .eq('homoclave', item.h)
-                        .single();
+                        .maybeSingle();
                     
-                    if (!existe) {
+                    if (!data) {
                         await _sb.from('catalogo_tramites').insert({
                             area_siglas: AREA_SIGLAS,
                             homoclave: item.h,
@@ -706,13 +852,13 @@
                 }
                 console.log("✓ Catálogo sincronizado");
             } catch (error) {
-                console.error("✗ Error al sincronizar catálogo:", error);
+                console.error("Error sync catálogo:", error);
             }
         }
         
         async function cargarDatosDesdeNube() {
             if (!conectado) {
-                console.log("⚠ Sin conexión, usando datos locales");
+                console.log("⚠ Sin conexión");
                 return;
             }
             
@@ -722,70 +868,48 @@
                 await cargarRegistrosDesdeNube();
                 await cargarCatalogoDesdeNube();
                 renderizarTodo();
-                mostrarAlerta('success', 'Datos actualizados desde la nube');
-                console.log("✓ Datos cargados desde la nube");
+                mostrarAlerta('success', 'Datos actualizados');
             } catch (error) {
-                console.error("✗ Error al cargar datos:", error);
-                mostrarAlerta('warning', 'Error al cargar datos: ' + error.message);
+                console.error("Error cargar:", error);
+                mostrarAlerta('warning', 'Error: ' + error.message);
             } finally {
                 mostrarCargando(false);
             }
         }
         
         async function cargarRegistrosDesdeNube() {
-            try {
-                const { data, error } = await _sb
-                    .from('registro_oficios')
-                    .select('*')
-                    .eq('area_siglas', AREA_SIGLAS)
-                    .order('fecha', { ascending: false });
-                
-                if (error) throw error;
-                
-                const locales = obtenerRegistros().filter(function(r) { return !r.sincronizado; });
-                
-                const nube = (data || []).map(function(reg) {
-                    return Object.assign({}, reg, {
-                        sincronizado: true,
-                        bloqueado: true
-                    });
-                });
-                
-                const combinados = nube.concat(locales);
-                guardarRegistros(combinados);
-                
-                console.log("✓ Registros cargados:", combinados.length);
-                return combinados.length;
-            } catch (error) {
-                throw error;
-            }
+            const { data, error } = await _sb
+                .from('registro_oficios')
+                .select('*')
+                .eq('area_siglas', AREA_SIGLAS)
+                .order('fecha', { ascending: false })
+                .limit(100);
+            
+            if (error) throw error;
+            
+            const locales = obtenerRegistros().filter(r => !r.sincronizado);
+            const nube = (data || []).map(reg => ({...reg, sincronizado: true, bloqueado: true}));
+            
+            const idsNube = new Set(nube.map(r => r.determinante));
+            const localesFiltrados = locales.filter(r => !idsNube.has(r.determinante));
+            
+            guardarRegistros([...nube, ...localesFiltrados]);
+            console.log("✓ Registros cargados");
         }
         
         async function cargarCatalogoDesdeNube() {
-            try {
-                const { data, error } = await _sb
-                    .from('catalogo_tramites')
-                    .select('*')
-                    .eq('area_siglas', AREA_SIGLAS)
-                    .order('homoclave', { ascending: true });
-                
-                if (error) throw error;
-                
-                if (data && data.length > 0) {
-                    const catalogo = data.map(function(item) {
-                        return {
-                            h: item.homoclave,
-                            n: item.nombre_tramite
-                        };
-                    });
-                    guardarCatalogo(catalogo);
-                    console.log("✓ Catálogo cargado:", catalogo.length, "trámites");
-                }
-                
-                return data ? data.length : 0;
-            } catch (error) {
-                console.error("✗ Error al cargar catálogo:", error);
-                throw error;
+            const { data, error } = await _sb
+                .from('catalogo_tramites')
+                .select('*')
+                .eq('area_siglas', AREA_SIGLAS)
+                .order('homoclave');
+            
+            if (error) throw error;
+            
+            if (data && data.length > 0) {
+                const catalogo = data.map(item => ({h: item.homoclave, n: item.nombre_tramite}));
+                guardarCatalogo(catalogo);
+                console.log("✓ Catálogo cargado");
             }
         }
         
@@ -798,58 +922,55 @@
                 return;
             }
             
-            if (!confirm('¿Eliminar el registro ' + reg.determinante + '?')) return;
+            if (!confirm('¿Eliminar ' + reg.determinante + '?')) return;
             
             regs.splice(idx, 1);
-            guardarRegistros(regs);
-            renderizarTodo();
-            mostrarAlerta('success', 'Registro eliminado');
+            if (guardarRegistros(regs)) {
+                renderizarTodo();
+                mostrarAlerta('success', 'Eliminado');
+            }
         }
         
         function verDetalle(idx) {
-            const regs = obtenerRegistros();
-            const reg = regs[idx];
+            const reg = obtenerRegistros()[idx];
             const fecha = new Date(reg.fecha).toLocaleString('es-MX', {
-                weekday: 'long',
-                year: 'numeric',
-                month: 'long',
-                day: 'numeric',
-                hour: '2-digit',
-                minute: '2-digit'
+                weekday: 'long', year: 'numeric', month: 'long', day: 'numeric', hour: '2-digit', minute: '2-digit'
             });
             
             const estado = reg.sincronizado ? 
                 '<span class="badge bg-blue-100 text-blue-800"><i class="fas fa-cloud-check"></i> Sincronizado</span>' :
                 '<span class="badge bg-amber-100 text-amber-800"><i class="fas fa-clock"></i> Pendiente</span>';
             
-            const html = '<div class="space-y-4">' +
-                '<div class="grid grid-cols-2 gap-4">' +
-                '<div class="p-4 bg-emerald-50 rounded-lg">' +
-                '<p class="text-xs text-slate-500 font-bold mb-1">DETERMINANTE</p>' +
-                '<p class="text-lg font-bold text-emerald-700 font-mono">' + reg.determinante + '</p>' +
-                '</div>' +
-                '<div class="p-4 bg-blue-50 rounded-lg">' +
-                '<p class="text-xs text-slate-500 font-bold mb-1">ESTADO</p>' +
-                '<div class="mt-2">' + estado + '</div>' +
-                '</div>' +
-                '</div>' +
-                '<div class="p-4 bg-slate-50 rounded-lg">' +
-                '<p class="text-xs text-slate-500 font-bold mb-2"><i class="fas fa-folder mr-1"></i> HOMOCLAVE</p>' +
-                '<p class="text-sm font-bold text-slate-800">' + (reg.homoclave || 'No especificado') + '</p>' +
-                '</div>' +
-                '<div class="p-4 bg-slate-50 rounded-lg">' +
-                '<p class="text-xs text-slate-500 font-bold mb-2"><i class="fas fa-hashtag mr-1"></i> BITÁCORA REFERENCIA</p>' +
-                '<p class="text-sm text-slate-700">' + (reg.bitacora_referencia || 'No especificado') + '</p>' +
-                '</div>' +
-                '<div class="p-4 bg-slate-50 rounded-lg">' +
-                '<p class="text-xs text-slate-500 font-bold mb-2"><i class="fas fa-align-left mr-1"></i> ASUNTO</p>' +
-                '<p class="text-sm text-slate-700 leading-relaxed">' + reg.asunto + '</p>' +
-                '</div>' +
-                '<div class="p-4 bg-slate-50 rounded-lg">' +
-                '<p class="text-xs text-slate-500 font-bold mb-2"><i class="fas fa-calendar-alt mr-1"></i> FECHA DE REGISTRO</p>' +
-                '<p class="text-sm text-slate-700">' + fecha + '</p>' +
-                '</div>' +
-                '</div>';
+            const html = `
+                <div class="space-y-4">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="p-4 bg-emerald-50 rounded-lg">
+                            <p class="text-xs text-slate-500 font-bold mb-1">DETERMINANTE</p>
+                            <p class="text-lg font-bold text-emerald-700 font-mono">${reg.determinante}</p>
+                        </div>
+                        <div class="p-4 bg-blue-50 rounded-lg">
+                            <p class="text-xs text-slate-500 font-bold mb-1">ESTADO</p>
+                            <div class="mt-2">${estado}</div>
+                        </div>
+                    </div>
+                    <div class="p-4 bg-slate-50 rounded-lg">
+                        <p class="text-xs text-slate-500 font-bold mb-2"><i class="fas fa-folder mr-1"></i> HOMOCLAVE</p>
+                        <p class="text-sm font-bold text-slate-800">${reg.homoclave || 'No especificado'}</p>
+                    </div>
+                    <div class="p-4 bg-slate-50 rounded-lg">
+                        <p class="text-xs text-slate-500 font-bold mb-2"><i class="fas fa-hashtag mr-1"></i> BITÁCORA</p>
+                        <p class="text-sm text-slate-700">${reg.bitacora_referencia || 'No especificado'}</p>
+                    </div>
+                    <div class="p-4 bg-slate-50 rounded-lg">
+                        <p class="text-xs text-slate-500 font-bold mb-2"><i class="fas fa-align-left mr-1"></i> ASUNTO</p>
+                        <p class="text-sm text-slate-700 leading-relaxed">${reg.asunto}</p>
+                    </div>
+                    <div class="p-4 bg-slate-50 rounded-lg">
+                        <p class="text-xs text-slate-500 font-bold mb-2"><i class="fas fa-calendar-alt mr-1"></i> FECHA</p>
+                        <p class="text-sm text-slate-700">${fecha}</p>
+                    </div>
+                </div>
+            `;
             
             document.getElementById('modal-view-content').innerHTML = html;
             document.getElementById('modal-view').style.display = 'block';
@@ -860,18 +981,13 @@
         }
         
         function duplicarRegistro(idx) {
-            const regs = obtenerRegistros();
-            const reg = regs[idx];
-            
+            const reg = obtenerRegistros()[idx];
             document.getElementById('sel-tramite').value = reg.homoclave || '';
             document.getElementById('txt-bitacora').value = '';
             document.getElementById('txt-asunto').value = reg.asunto;
-            
-            const len = reg.asunto.length;
-            document.getElementById('char-count').textContent = len + '/500';
-            
+            document.getElementById('char-count').textContent = reg.asunto.length + '/500';
             window.scrollTo({top: 0, behavior: 'smooth'});
-            mostrarAlerta('info', 'Registro duplicado. Modifique y presione Guardar');
+            mostrarAlerta('info', 'Registro duplicado');
         }
         
         function renderizarTodo() {
@@ -884,32 +1000,33 @@
         function renderizarCatalogo() {
             const cat = obtenerCatalogo();
             const lista = document.getElementById('catalogo-list');
+            
             if (cat.length === 0) {
                 lista.innerHTML = '<p class="text-xs text-slate-500 italic text-center py-2">Sin trámites</p>';
                 return;
             }
-            lista.innerHTML = cat.map(function(c) {
-                return '<div class="flex items-center justify-between bg-white p-2 rounded border border-slate-200">' +
-                    '<div class="flex-1">' +
-                    '<p class="text-xs font-bold text-slate-700">' + c.h + '</p>' +
-                    '<p class="text-[10px] text-slate-500">' + c.n + '</p>' +
-                    '</div>' +
-                    '<button onclick="eliminarDelCatalogo(\'' + c.h + '\')" class="text-red-400 hover:text-red-600 px-2">' +
-                    '<i class="fas fa-trash text-xs"></i>' +
-                    '</button></div>';
-            }).join('');
+            
+            lista.innerHTML = cat.map(c => `
+                <div class="flex items-center justify-between bg-white p-2 rounded border border-slate-200">
+                    <div class="flex-1">
+                        <p class="text-xs font-bold text-slate-700">${c.h}</p>
+                        <p class="text-[10px] text-slate-500">${c.n}</p>
+                    </div>
+                    <button onclick="eliminarDelCatalogo('${c.h}')" class="text-red-400 hover:text-red-600 px-2">
+                        <i class="fas fa-trash text-xs"></i>
+                    </button>
+                </div>
+            `).join('');
         }
         
         function renderizarSelector() {
             const cat = obtenerCatalogo();
             const sel = document.getElementById('sel-tramite');
-            if (cat.length === 0) {
-                sel.innerHTML = '<option value="">-- Sin trámites --</option>';
-            } else {
-                sel.innerHTML = '<option value="">-- Seleccione --</option>' + cat.map(function(c) {
-                    return '<option value="' + c.h + '">' + c.h + ' - ' + c.n + '</option>';
-                }).join('');
-            }
+            
+            sel.innerHTML = cat.length === 0 ? 
+                '<option value="">-- Sin trámites --</option>' :
+                '<option value="">-- Seleccione --</option>' + 
+                cat.map(c => `<option value="${c.h}">${c.h} - ${c.n}</option>`).join('');
         }
         
         function renderizarTabla() {
@@ -917,117 +1034,100 @@
             const tbody = document.getElementById('table-body');
             
             if (regs.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="3" class="p-12 text-center text-slate-400">' +
-                    '<i class="fas fa-inbox text-5xl mb-3 opacity-50"></i>' +
-                    '<p class="font-semibold">No hay registros</p></td></tr>';
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="3" class="p-12 text-center text-slate-400">
+                            <i class="fas fa-inbox text-5xl mb-3 opacity-50"></i>
+                            <p class="font-semibold">No hay registros</p>
+                        </td>
+                    </tr>
+                `;
                 return;
             }
             
-            const reversed = regs.slice().reverse();
-            tbody.innerHTML = reversed.map(function(r, i) {
+            tbody.innerHTML = [...regs].reverse().map((r, i) => {
                 const idx = regs.length - 1 - i;
                 const fecha = new Date(r.fecha).toLocaleDateString('es-MX', {
                     day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'
                 });
                 const rowClass = r.sincronizado ? 'row-synced' : 'row-local';
+                const asunto = r.asunto.length > 100 ? r.asunto.substring(0, 100) + '...' : r.asunto;
                 
-                let html = '<tr class="table-row-hover ' + rowClass + '">';
-                html += '<td class="p-4"><div class="space-y-1">';
-                html += '<p class="font-bold text-slate-900 font-mono text-sm">' + r.determinante + '</p>';
-                html += '<p class="text-[10px] text-slate-500"><i class="fas fa-calendar-alt mr-1"></i>' + fecha + '</p>';
-                html += '<p class="text-xs font-bold text-purple-700 mt-1"><i class="fas fa-folder mr-1"></i>' + (r.homoclave || 'N/A') + '</p>';
-                html += '<p class="text-[10px] text-slate-600"><i class="fas fa-hashtag mr-1"></i>' + (r.bitacora_referencia || 'N/A') + '</p>';
-                html += '<p class="text-xs text-slate-700 mt-1">' + r.asunto.substring(0, 100) + '...</p>';
-                html += '</div></td>';
-                html += '<td class="p-4 text-center">';
-                if (r.sincronizado) {
-                    html += '<span class="badge bg-blue-100 text-blue-800">';
-                    html += '<i class="fas fa-cloud-check"></i> Sincronizado';
-                } else {
-                    html += '<span class="badge bg-amber-100 text-amber-800">';
-                    html += '<i class="fas fa-clock"></i> Pendiente';
-                }
-                html += '</span></td>';
-                html += '<td class="p-4"><div class="flex items-center justify-center gap-1">';
-                html += '<button onclick="verDetalle(' + idx + ')" class="btn-action p-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg" title="Ver detalle"><i class="fas fa-eye"></i></button>';
-                if (!r.sincronizado && !r.bloqueado) {
-                    html += '<button onclick="eliminar(' + idx + ')" class="btn-action p-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg" title="Eliminar"><i class="fas fa-trash"></i></button>';
-                } else {
-                    html += '<span class="text-slate-400 text-xs px-2" title="Registro protegido"><i class="fas fa-lock"></i></span>';
-                }
-                html += '<button onclick="duplicarRegistro(' + idx + ')" class="btn-action p-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg" title="Duplicar"><i class="fas fa-copy"></i></button>';
-                html += '</div></td></tr>';
-                return html;
+                return `
+                    <tr class="table-row-hover ${rowClass}">
+                        <td class="p-4">
+                            <div class="space-y-1">
+                                <p class="font-bold text-slate-900 font-mono text-sm">${r.determinante}</p>
+                                <p class="text-[10px] text-slate-500"><i class="fas fa-calendar-alt mr-1"></i>${fecha}</p>
+                                <p class="text-xs font-bold text-purple-700 mt-1"><i class="fas fa-folder mr-1"></i>${r.homoclave || 'N/A'}</p>
+                                <p class="text-[10px] text-slate-600"><i class="fas fa-hashtag mr-1"></i>${r.bitacora_referencia || 'N/A'}</p>
+                                <p class="text-xs text-slate-700 mt-1">${asunto}</p>
+                            </div>
+                        </td>
+                        <td class="p-4 text-center">
+                            ${r.sincronizado ? 
+                                '<span class="badge bg-blue-100 text-blue-800"><i class="fas fa-cloud-check"></i> Sincronizado</span>' :
+                                '<span class="badge bg-amber-100 text-amber-800"><i class="fas fa-clock"></i> Pendiente</span>'}
+                        </td>
+                        <td class="p-4">
+                            <div class="flex items-center justify-center gap-1">
+                                <button onclick="verDetalle(${idx})" class="btn-action p-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg" title="Ver">
+                                    <i class="fas fa-eye"></i>
+                                </button>
+                                ${(!r.sincronizado && !r.bloqueado) ? 
+                                    `<button onclick="eliminar(${idx})" class="btn-action p-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg" title="Eliminar">
+                                        <i class="fas fa-trash"></i>
+                                    </button>` :
+                                    '<span class="text-slate-400 text-xs px-2" title="Protegido"><i class="fas fa-lock"></i></span>'}
+                                <button onclick="duplicarRegistro(${idx})" class="btn-action p-2 bg-purple-100 hover:bg-purple-200 text-purple-700 rounded-lg" title="Duplicar">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
             }).join('');
         }
         
         function actualizarEstadisticas() {
             const regs = obtenerRegistros();
             const cat = obtenerCatalogo();
-            const sincronizados = regs.filter(function(r) { return r.sincronizado; }).length;
-            const pendientes = regs.filter(function(r) { return !r.sincronizado; }).length;
             
             document.getElementById('stat-total').textContent = regs.length;
-            document.getElementById('stat-sincronizados').textContent = sincronizados;
-            document.getElementById('stat-pendientes').textContent = pendientes;
+            document.getElementById('stat-sincronizados').textContent = regs.filter(r => r.sincronizado).length;
+            document.getElementById('stat-pendientes').textContent = regs.filter(r => !r.sincronizado).length;
             document.getElementById('stat-tramites').textContent = cat.length;
             
             const semanaAtras = new Date();
             semanaAtras.setDate(semanaAtras.getDate() - 7);
-            const estaSemana = regs.filter(function(r) { return new Date(r.fecha) >= semanaAtras; }).length;
-            document.getElementById('stat-semana').textContent = estaSemana;
+            document.getElementById('stat-semana').textContent = regs.filter(r => new Date(r.fecha) >= semanaAtras).length;
         }
         
         function buscarEnTabla() {
             const busqueda = document.getElementById('search-input').value.toLowerCase();
-            const filas = document.querySelectorAll('#table-body tr');
-            filas.forEach(function(fila) {
-                const texto = fila.textContent.toLowerCase();
-                fila.style.display = texto.includes(busqueda) ? '' : 'none';
+            document.querySelectorAll('#table-body tr').forEach(fila => {
+                fila.style.display = fila.textContent.toLowerCase().includes(busqueda) ? '' : 'none';
             });
         }
         
         function exportarCSV() {
             const regs = obtenerRegistros();
             if (regs.length === 0) {
-                mostrarAlerta('info', 'No hay datos para exportar');
+                mostrarAlerta('info', 'No hay datos');
                 return;
             }
             
             let csv = 'Determinante,Consecutivo,Año,Área,Homoclave,Bitácora,Asunto,Fecha,Sincronizado\n';
-            regs.forEach(function(r) {
-                csv += '"' + r.determinante + '",' + r.consecutivo + ',' + r.anio + ',"' + r.area_siglas + '","' + (r.homoclave || '') + '","' + (r.bitacora_referencia || '') + '","' + r.asunto.replace(/"/g, '""') + '","' + r.fecha + '",' + (r.sincronizado ? 'Si' : 'No') + '\n';
-            });
+            csv += regs.map(r => 
+                `"${r.determinante}",${r.consecutivo},${r.anio},"${r.area_siglas}","${r.homoclave || ''}","${r.bitacora_referencia || ''}","${r.asunto.replace(/"/g, '""')}","${r.fecha}",${r.sincronizado ? 'Si' : 'No'}`
+            ).join('\n');
             
             const blob = new Blob([csv], {type: 'text/csv;charset=utf-8;'});
             const link = document.createElement('a');
             link.href = URL.createObjectURL(blob);
-            link.download = 'Exportacion_' + AREA_SIGLAS + '_' + new Date().toISOString().split('T')[0] + '.csv';
+            link.download = `Export_${AREA_SIGLAS}_${new Date().toISOString().split('T')[0]}.csv`;
             link.click();
-            mostrarAlerta('success', 'Archivo CSV exportado correctamente');
-        }
-        
-        function guardarRespaldoAutomatico() {
-            const regs = obtenerRegistros();
-            const cat = obtenerCatalogo();
-            
-            if (regs.length === 0 && cat.length === 0) return;
-            
-            const respaldo = {
-                area: AREA_SIGLAS,
-                nombre: AREA_NOMBRE,
-                fecha: new Date().toISOString(),
-                registros: regs,
-                catalogo: cat,
-                version: '2.0.0'
-            };
-            
-            const blob = new Blob([JSON.stringify(respaldo, null, 2)], {type: 'application/json'});
-            const link = document.createElement('a');
-            link.href = URL.createObjectURL(blob);
-            link.download = 'Respaldo_' + AREA_SIGLAS + '_' + new Date().toISOString().split('T')[0] + '.json';
-            
-            console.log("✓ Respaldo automático generado:", new Date().toLocaleTimeString());
+            mostrarAlerta('success', 'CSV exportado');
         }
         
         function imprimirTabla() {
@@ -1035,12 +1135,11 @@
         }
         
         function actualizarFecha() {
-            document.getElementById('last-update').textContent = new Date().toLocaleString('es-MX', {
-                day: '2-digit',
-                month: 'short',
-                hour: '2-digit',
-                minute: '2-digit'
-            });
+            const fecha = new Date().toLocaleString('es-MX', {day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit'});
+            document.getElementById('last-update').textContent = fecha;
+            try {
+                localStorage.setItem(LS_ULTIMA_ACT, fecha);
+            } catch(e) {}
         }
         
         function mostrarCargando(mostrar) {
@@ -1050,42 +1149,39 @@
                     overlay = document.createElement('div');
                     overlay.id = 'loading-overlay';
                     overlay.className = 'loading-overlay';
-                    overlay.innerHTML = '<div class="text-center"><div class="spinner mx-auto mb-4"></div><p class="text-white font-bold text-lg">Cargando datos...</p></div>';
+                    overlay.innerHTML = `
+                        <div class="text-center">
+                            <div class="spinner mx-auto mb-4"></div>
+                            <p class="text-white font-bold text-lg">Cargando...</p>
+                        </div>
+                    `;
                     document.body.appendChild(overlay);
                 }
             } else {
-                if (overlay) {
-                    overlay.remove();
-                }
+                if (overlay) overlay.remove();
             }
         }
         
         function mostrarAlerta(tipo, mensaje) {
-            const colores = {
-                success: 'bg-emerald-500',
-                error: 'bg-red-500',
-                warning: 'bg-amber-500',
-                info: 'bg-blue-500'
-            };
-            const iconos = {
-                success: 'fa-check-circle',
-                error: 'fa-exclamation-circle',
-                warning: 'fa-exclamation-triangle',
-                info: 'fa-info-circle'
-            };
+            const colores = {success: 'bg-emerald-500', error: 'bg-red-500', warning: 'bg-amber-500', info: 'bg-blue-500'};
+            const iconos = {success: 'fa-check-circle', error: 'fa-exclamation-circle', warning: 'fa-exclamation-triangle', info: 'fa-info-circle'};
+            
             const alerta = document.createElement('div');
-            alerta.className = 'fixed top-4 right-4 ' + colores[tipo] + ' text-white px-6 py-4 rounded-lg shadow-2xl z-50 flex items-start gap-3 animate-fade-in max-w-md';
-            alerta.innerHTML = '<i class="fas ' + iconos[tipo] + ' text-xl mt-0.5"></i>' +
-                '<div class="flex-1">' +
-                '<div class="font-bold mb-1">' + tipo.toUpperCase() + '</div>' +
-                '<div class="text-sm">' + mensaje + '</div>' +
-                '</div>' +
-                '<button onclick="this.parentElement.remove()" class="text-white text-xl hover:bg-white hover:bg-opacity-20 p-1 rounded">×</button>';
+            alerta.className = `fixed top-4 right-4 ${colores[tipo]} text-white px-6 py-4 rounded-lg shadow-2xl z-50 flex items-start gap-3 animate-fade-in max-w-md`;
+            alerta.innerHTML = `
+                <i class="fas ${iconos[tipo]} text-xl mt-0.5"></i>
+                <div class="flex-1">
+                    <div class="font-bold mb-1">${tipo.toUpperCase()}</div>
+                    <div class="text-sm">${mensaje}</div>
+                </div>
+                <button onclick="this.parentElement.remove()" class="text-white text-xl hover:bg-white hover:bg-opacity-20 p-1 rounded">×</button>
+            `;
             document.body.appendChild(alerta);
-            setTimeout(function() {
+            
+            setTimeout(() => {
                 alerta.style.opacity = '0';
                 alerta.style.transition = 'opacity 0.3s';
-                setTimeout(function() { alerta.remove(); }, 300);
+                setTimeout(() => alerta.remove(), 300);
             }, 5000);
         }
         
@@ -1093,7 +1189,7 @@
             if (event.target.className === 'modal') {
                 event.target.style.display = 'none';
             }
-        }
+        };
     </script>
 </body>
 </html>
