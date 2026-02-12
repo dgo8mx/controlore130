@@ -76,19 +76,29 @@
             from { transform: translateY(-50px); opacity: 0; }
             to { transform: translateY(0); opacity: 1; }
         }
-        .badge-estado {
-            padding: 0.25rem 0.75rem;
-            border-radius: 9999px;
-            font-size: 0.7rem;
-            font-weight: 700;
-            text-transform: uppercase;
-            display: inline-block;
+        .period-toggle {
+            display: inline-flex;
+            background: #f1f5f9;
+            padding: 4px;
+            border-radius: 8px;
+            gap: 4px;
         }
-        .estado-pendiente { background: #fef3c7; color: #92400e; }
-        .estado-proceso { background: #dbeafe; color: #1e40af; }
-        .estado-atendido { background: #e0e7ff; color: #4338ca; }
-        .estado-concluido { background: #d1fae5; color: #065f46; }
-        .estado-cancelado { background: #fee2e2; color: #991b1b; }
+        .period-toggle button {
+            padding: 6px 16px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            transition: all 0.2s;
+            border: none;
+            cursor: pointer;
+            background: transparent;
+            color: #64748b;
+        }
+        .period-toggle button.active {
+            background: white;
+            color: #3b82f6;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        }
     </style>
 </head>
 <body class="bg-slate-100 font-sans">
@@ -97,7 +107,7 @@
     <header class="gradient-bg text-white p-4 shadow-xl border-b-4 border-[#9D2449]">
         <div class="container mx-auto flex justify-between items-center flex-wrap gap-4">
             <div class="flex items-center gap-4">
-              -🌲🌲🌲-
+                🌲🌲🌲
                 <div>
                     <h1 class="text-xl font-bold">Sistema de Control de Trámites</h1>
                     <p class="text-xs text-emerald-200">SEMARNAT Durango | Oficina de Representación OR-130</p>
@@ -137,7 +147,7 @@
     <main class="container mx-auto p-6 space-y-6">
         
         <!-- Cards de Estadísticas -->
-        <div class="grid grid-cols-1 md:grid-cols-5 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
                 <div class="flex items-center justify-between">
                     <div>
@@ -165,35 +175,11 @@
             <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
                 <div class="flex items-center justify-between">
                     <div>
-                        <p class="text-xs text-slate-500 font-bold uppercase">Hoy</p>
+                        <p class="text-xs text-slate-500 font-bold uppercase">Registros Hoy</p>
                         <h2 id="stat-hoy" class="text-3xl font-bold text-purple-700">0</h2>
                     </div>
                     <div class="bg-purple-100 p-3 rounded-lg">
                         <i class="fas fa-calendar-day text-2xl text-purple-600"></i>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-xs text-slate-500 font-bold uppercase">Pendientes</p>
-                        <h2 id="stat-pendientes" class="text-3xl font-bold text-amber-700">0</h2>
-                    </div>
-                    <div class="bg-amber-100 p-3 rounded-lg">
-                        <i class="fas fa-clock text-2xl text-amber-600"></i>
-                    </div>
-                </div>
-            </div>
-
-            <div class="bg-white rounded-xl shadow-lg p-6 card-hover">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-xs text-slate-500 font-bold uppercase">Concluidos</p>
-                        <h2 id="stat-concluidos" class="text-3xl font-bold text-green-700">0</h2>
-                    </div>
-                    <div class="bg-green-100 p-3 rounded-lg">
-                        <i class="fas fa-check-circle text-2xl text-green-600"></i>
                     </div>
                 </div>
             </div>
@@ -210,11 +196,21 @@
             </div>
 
             <div class="bg-white rounded-xl shadow-lg p-6">
-                <h3 class="text-lg font-bold text-slate-800 mb-4 flex items-center gap-2">
-                    <i class="fas fa-chart-pie text-blue-600"></i>
-                    Distribución por Estado
-                </h3>
-                <canvas id="chartEstados" height="250"></canvas>
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                        <i class="fas fa-chart-line text-blue-600"></i>
+                        Evolución Temporal
+                    </h3>
+                    <div class="period-toggle">
+                        <button onclick="cambiarPeriodoTemporal('semanal')" id="btn-semanal" class="active">
+                            SEMANAL
+                        </button>
+                        <button onclick="cambiarPeriodoTemporal('mensual')" id="btn-mensual">
+                            MENSUAL
+                        </button>
+                    </div>
+                </div>
+                <canvas id="chartTemporal" height="250"></canvas>
             </div>
         </div>
 
@@ -240,17 +236,12 @@
                     <option value="">Todas las áreas</option>
                 </select>
 
-                <select 
-                    id="filterEstado" 
+                <input 
+                    type="date" 
+                    id="filterFecha" 
                     onchange="filtrarTabla()"
+                    placeholder="Filtrar por fecha"
                     class="px-4 py-2 border-2 border-slate-200 rounded-lg focus:border-emerald-500 focus:outline-none text-sm">
-                    <option value="">Todos los estados</option>
-                    <option value="Pendiente">Pendiente</option>
-                    <option value="En Proceso">En Proceso</option>
-                    <option value="Atendido">Atendido</option>
-                    <option value="Concluido">Concluido</option>
-                    <option value="Cancelado">Cancelado</option>
-                </select>
                 
                 <button 
                     onclick="limpiarFiltros()"
@@ -258,26 +249,6 @@
                     <i class="fas fa-eraser"></i>
                     Limpiar Filtros
                 </button>
-            </div>
-
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
-                <div class="flex items-center gap-2">
-                    <label class="text-xs font-bold text-slate-600">Desde:</label>
-                    <input 
-                        type="date" 
-                        id="filterFechaDesde" 
-                        onchange="filtrarTabla()"
-                        class="flex-1 px-3 py-2 border-2 border-slate-200 rounded-lg focus:border-emerald-500 focus:outline-none text-sm">
-                </div>
-                
-                <div class="flex items-center gap-2">
-                    <label class="text-xs font-bold text-slate-600">Hasta:</label>
-                    <input 
-                        type="date" 
-                        id="filterFechaHasta" 
-                        onchange="filtrarTabla()"
-                        class="flex-1 px-3 py-2 border-2 border-slate-200 rounded-lg focus:border-emerald-500 focus:outline-none text-sm">
-                </div>
             </div>
         </div>
 
@@ -304,15 +275,14 @@
                             <th class="p-4 text-left text-xs font-bold text-slate-700 uppercase">Fecha</th>
                             <th class="p-4 text-left text-xs font-bold text-slate-700 uppercase">Determinante</th>
                             <th class="p-4 text-center text-xs font-bold text-slate-700 uppercase">Área</th>
-                            <th class="p-4 text-center text-xs font-bold text-slate-700 uppercase">Estado</th>
                             <th class="p-4 text-left text-xs font-bold text-slate-700 uppercase">Bitácora</th>
-                            <th class="p-4 text-left text-xs font-bold text-slate-700 uppercase">Detalles</th>
+                            <th class="p-4 text-left text-xs font-bold text-slate-700 uppercase">Asunto</th>
                             <th class="p-4 text-center text-xs font-bold text-slate-700 uppercase">Acciones</th>
                         </tr>
                     </thead>
                     <tbody id="table-content">
                         <tr>
-                            <td colspan="7" class="p-12 text-center text-slate-400">
+                            <td colspan="6" class="p-12 text-center text-slate-400">
                                 <i class="fas fa-spinner fa-spin text-4xl mb-3"></i>
                                 <p class="font-bold">Cargando datos...</p>
                             </td>
@@ -371,7 +341,8 @@
         let globalData = [];
         let filteredData = [];
         let chartAreasInstance = null;
-        let chartEstadosInstance = null;
+        let chartTemporalInstance = null;
+        let periodoTemporal = 'semanal';
         let registroEditando = null;
 
         // ==========================================
@@ -434,7 +405,7 @@
         }
 
         // ==========================================
-        // CARGAR DATOS
+        // CARGAR DATOS (OPTIMIZADO)
         // ==========================================
         async function fetchData() {
             const icon = document.getElementById('sync-icon');
@@ -443,9 +414,10 @@
             try {
                 console.log("Cargando datos desde Supabase...");
                 
+                // Solo traer campos necesarios para mejorar velocidad
                 const { data, error } = await _sb
                     .from('registro_oficios')
-                    .select('*')
+                    .select('id, determinante, consecutivo, anio, area_siglas, homoclave, bitacora_referencia, asunto, fecha')
                     .order('fecha', { ascending: false });
                 
                 if (error) throw error;
@@ -456,7 +428,7 @@
                 console.log("✓ Datos cargados:", globalData.length, "registros");
                 
                 renderAll();
-                mostrarAlerta('success', `${globalData.length} registros cargados correctamente`);
+                mostrarAlerta('success', `${globalData.length} registros cargados`);
                 
             } catch (err) {
                 console.error("✗ Error al cargar datos:", err);
@@ -464,7 +436,7 @@
                 
                 document.getElementById('table-content').innerHTML = `
                     <tr>
-                        <td colspan="7" class="p-8 text-center text-red-500">
+                        <td colspan="6" class="p-8 text-center text-red-500">
                             <i class="fas fa-exclamation-triangle text-4xl mb-2"></i>
                             <p class="font-bold">Error al cargar datos</p>
                             <p class="text-sm">${err.message}</p>
@@ -498,20 +470,17 @@
             const hoyStr = new Date().toISOString().split('T')[0];
             const hoyCount = globalData.filter(r => r.fecha && r.fecha.includes(hoyStr)).length;
             document.getElementById('stat-hoy').innerText = hoyCount;
-            
-            // Nuevas estadísticas por estado
-            const pendientes = globalData.filter(r => !r.estado || r.estado === 'Pendiente').length;
-            const concluidos = globalData.filter(r => r.estado === 'Concluido').length;
-            
-            document.getElementById('stat-pendientes').innerText = pendientes;
-            document.getElementById('stat-concluidos').innerText = concluidos;
         }
 
         // ==========================================
-        // GRÁFICAS
+        // GRÁFICAS (OPTIMIZADO)
         // ==========================================
         function renderGraficas() {
-            // Gráfica por Área
+            renderGraficaAreas();
+            renderGraficaTemporal();
+        }
+
+        function renderGraficaAreas() {
             const counts = {};
             globalData.forEach(r => {
                 counts[r.area_siglas] = (counts[r.area_siglas] || 0) + 1;
@@ -523,7 +492,7 @@
                 data: {
                     labels: Object.keys(counts).sort(),
                     datasets: [{
-                        label: 'Determinantes Registrados',
+                        label: 'Determinantes',
                         data: Object.keys(counts).sort().map(k => counts[k]),
                         backgroundColor: '#10b981',
                         borderRadius: 5,
@@ -534,12 +503,7 @@
                     responsive: true,
                     maintainAspectRatio: true,
                     plugins: { 
-                        legend: { display: false },
-                        tooltip: {
-                            callbacks: {
-                                label: (context) => `Determinantes: ${context.parsed.y}`
-                            }
-                        }
+                        legend: { display: false }
                     },
                     scales: { 
                         y: { 
@@ -549,68 +513,108 @@
                     }
                 }
             });
+        }
 
-            // Gráfica por Estado
-            const estadoCounts = {
-                'Pendiente': 0,
-                'En Proceso': 0,
-                'Atendido': 0,
-                'Concluido': 0,
-                'Cancelado': 0
-            };
+        function renderGraficaTemporal() {
+            const datosTemporales = calcularDatosTemporal();
             
-            globalData.forEach(r => {
-                const estado = r.estado || 'Pendiente';
-                estadoCounts[estado] = (estadoCounts[estado] || 0) + 1;
-            });
-
-            if (chartEstadosInstance) chartEstadosInstance.destroy();
-            chartEstadosInstance = new Chart(document.getElementById('chartEstados'), {
-                type: 'doughnut',
+            if (chartTemporalInstance) chartTemporalInstance.destroy();
+            chartTemporalInstance = new Chart(document.getElementById('chartTemporal'), {
+                type: 'line',
                 data: {
-                    labels: Object.keys(estadoCounts),
+                    labels: datosTemporales.labels,
                     datasets: [{
-                        data: Object.values(estadoCounts),
-                        backgroundColor: [
-                            '#f59e0b', // Pendiente
-                            '#3b82f6', // En Proceso
-                            '#6366f1', // Atendido
-                            '#10b981', // Concluido
-                            '#ef4444'  // Cancelado
-                        ],
-                        borderWidth: 2,
-                        borderColor: '#ffffff'
+                        label: 'Determinantes Registrados',
+                        data: datosTemporales.total,
+                        borderColor: '#3b82f6',
+                        backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                        tension: 0.4,
+                        fill: true,
+                        pointRadius: 4,
+                        pointHoverRadius: 6
                     }]
                 },
                 options: {
                     responsive: true,
                     maintainAspectRatio: true,
+                    interaction: {
+                        mode: 'index',
+                        intersect: false,
+                    },
                     plugins: {
-                        legend: {
-                            position: 'bottom',
-                            labels: {
-                                padding: 15,
-                                font: { size: 11, weight: 'bold' }
-                            }
-                        },
-                        tooltip: {
-                            callbacks: {
-                                label: (context) => {
-                                    const label = context.label || '';
-                                    const value = context.parsed || 0;
-                                    const total = context.dataset.data.reduce((a, b) => a + b, 0);
-                                    const percentage = ((value / total) * 100).toFixed(1);
-                                    return `${label}: ${value} (${percentage}%)`;
-                                }
-                            }
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: { precision: 0 }
                         }
                     }
                 }
             });
         }
 
+        function calcularDatosTemporal() {
+            const ahora = new Date();
+            const labels = [];
+            const total = [];
+
+            if (periodoTemporal === 'semanal') {
+                // Últimas 12 semanas
+                for (let i = 11; i >= 0; i--) {
+                    const fecha = new Date(ahora);
+                    fecha.setDate(fecha.getDate() - (i * 7));
+                    
+                    const inicioSemana = new Date(fecha);
+                    inicioSemana.setDate(fecha.getDate() - fecha.getDay());
+                    inicioSemana.setHours(0, 0, 0, 0);
+                    
+                    const finSemana = new Date(inicioSemana);
+                    finSemana.setDate(finSemana.getDate() + 6);
+                    finSemana.setHours(23, 59, 59, 999);
+
+                    const registrosSemana = globalData.filter(r => {
+                        const fechaReg = new Date(r.fecha);
+                        return fechaReg >= inicioSemana && fechaReg <= finSemana;
+                    });
+
+                    const label = `${inicioSemana.getDate()}/${inicioSemana.getMonth() + 1}`;
+                    labels.push(label);
+                    total.push(registrosSemana.length);
+                }
+            } else {
+                // Últimos 12 meses
+                for (let i = 11; i >= 0; i--) {
+                    const fecha = new Date(ahora.getFullYear(), ahora.getMonth() - i, 1);
+                    const mes = fecha.toLocaleDateString('es-MX', { month: 'short', year: '2-digit' });
+                    
+                    const inicioMes = new Date(fecha.getFullYear(), fecha.getMonth(), 1);
+                    const finMes = new Date(fecha.getFullYear(), fecha.getMonth() + 1, 0, 23, 59, 59);
+
+                    const registrosMes = globalData.filter(r => {
+                        const fechaReg = new Date(r.fecha);
+                        return fechaReg >= inicioMes && fechaReg <= finMes;
+                    });
+
+                    labels.push(mes);
+                    total.push(registrosMes.length);
+                }
+            }
+
+            return { labels, total };
+        }
+
+        function cambiarPeriodoTemporal(periodo) {
+            periodoTemporal = periodo;
+            
+            document.getElementById('btn-semanal').classList.toggle('active', periodo === 'semanal');
+            document.getElementById('btn-mensual').classList.toggle('active', periodo === 'mensual');
+            
+            renderGraficaTemporal();
+        }
+
         // ==========================================
-        // TABLA
+        // TABLA (OPTIMIZADO - SIN ESTADO)
         // ==========================================
         function renderTabla() {
             const tbody = document.getElementById('table-content');
@@ -619,7 +623,7 @@
             if (filteredData.length === 0) {
                 tbody.innerHTML = `
                     <tr>
-                        <td colspan="7" class="p-8 text-center text-slate-400">
+                        <td colspan="6" class="p-8 text-center text-slate-400">
                             <i class="fas fa-inbox text-4xl mb-2"></i>
                             <p>No hay registros que mostrar</p>
                         </td>
@@ -628,70 +632,53 @@
                 return;
             }
 
-            tbody.innerHTML = filteredData.map(r => {
-                const estado = r.estado || 'Pendiente';
-                const estadoClass = {
-                    'Pendiente': 'estado-pendiente',
-                    'En Proceso': 'estado-proceso',
-                    'Atendido': 'estado-atendido',
-                    'Concluido': 'estado-concluido',
-                    'Cancelado': 'estado-cancelado'
-                }[estado] || 'estado-pendiente';
-
-                return `
-                    <tr class="hover:bg-emerald-50 transition border-b border-slate-100">
-                        <td class="p-4 text-slate-500 text-xs">
-                            ${new Date(r.fecha).toLocaleDateString('es-MX', {
-                                day: '2-digit',
-                                month: 'short',
-                                year: 'numeric'
-                            })}
-                        </td>
-                        <td class="p-4 font-bold text-emerald-900 font-mono text-sm">
-                            ${r.determinante}
-                        </td>
-                        <td class="p-4 text-center">
-                            <span class="bg-emerald-100 text-emerald-800 px-2 py-1 rounded text-[10px] font-bold">
-                                ${r.area_siglas}
-                            </span>
-                        </td>
-                        <td class="p-4 text-center">
-                            <span class="badge-estado ${estadoClass}">
-                                ${estado}
-                            </span>
-                        </td>
-                        <td class="p-4 font-mono text-xs font-bold text-slate-600">
-                            ${r.bitacora_referencia || 'N/A'}
-                        </td>
-                        <td class="p-4 text-xs text-slate-500 leading-tight">
-                            <span class="text-slate-800 font-bold block mb-1">${r.homoclave || 'N/A'}</span>
-                            ${r.asunto.substring(0, 80)}${r.asunto.length > 80 ? '...' : ''}
-                        </td>
-                        <td class="p-4">
-                            <div class="flex items-center justify-center gap-1">
-                                <button 
-                                    onclick="verDetalle(${r.id})" 
-                                    class="p-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition"
-                                    title="Ver detalle">
-                                    <i class="fas fa-eye text-sm"></i>
-                                </button>
-                                <button 
-                                    onclick="abrirModalEditar(${r.id})" 
-                                    class="p-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-lg transition"
-                                    title="Editar">
-                                    <i class="fas fa-edit text-sm"></i>
-                                </button>
-                                <button 
-                                    onclick="confirmarEliminar(${r.id}, '${r.determinante}')" 
-                                    class="p-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition"
-                                    title="Eliminar">
-                                    <i class="fas fa-trash text-sm"></i>
-                                </button>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
+            tbody.innerHTML = filteredData.map(r => `
+                <tr class="hover:bg-emerald-50 transition border-b border-slate-100">
+                    <td class="p-4 text-slate-500 text-xs">
+                        ${new Date(r.fecha).toLocaleDateString('es-MX', {
+                            day: '2-digit',
+                            month: 'short',
+                            year: 'numeric'
+                        })}
+                    </td>
+                    <td class="p-4 font-bold text-emerald-900 font-mono text-sm">
+                        ${r.determinante}
+                    </td>
+                    <td class="p-4 text-center">
+                        <span class="bg-emerald-100 text-emerald-800 px-2 py-1 rounded text-[10px] font-bold">
+                            ${r.area_siglas}
+                        </span>
+                    </td>
+                    <td class="p-4 font-mono text-xs font-bold text-slate-600">
+                        ${r.bitacora_referencia || 'N/A'}
+                    </td>
+                    <td class="p-4 text-xs text-slate-500 leading-tight">
+                        ${r.asunto.substring(0, 80)}${r.asunto.length > 80 ? '...' : ''}
+                    </td>
+                    <td class="p-4">
+                        <div class="flex items-center justify-center gap-1">
+                            <button 
+                                onclick="verDetalle(${r.id})" 
+                                class="p-2 bg-blue-100 hover:bg-blue-200 text-blue-700 rounded-lg transition"
+                                title="Ver detalle">
+                                <i class="fas fa-eye text-sm"></i>
+                            </button>
+                            <button 
+                                onclick="abrirModalEditar(${r.id})" 
+                                class="p-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 rounded-lg transition"
+                                title="Editar">
+                                <i class="fas fa-edit text-sm"></i>
+                            </button>
+                            <button 
+                                onclick="confirmarEliminar(${r.id}, '${r.determinante}')" 
+                                class="p-2 bg-red-100 hover:bg-red-200 text-red-700 rounded-lg transition"
+                                title="Eliminar">
+                                <i class="fas fa-trash text-sm"></i>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
         }
 
         // ==========================================
@@ -710,15 +697,6 @@
                 minute: '2-digit'
             });
 
-            const estado = registro.estado || 'Pendiente';
-            const estadoClass = {
-                'Pendiente': 'estado-pendiente',
-                'En Proceso': 'estado-proceso',
-                'Atendido': 'estado-atendido',
-                'Concluido': 'estado-concluido',
-                'Cancelado': 'estado-cancelado'
-            }[estado] || 'estado-pendiente';
-
             const html = `
                 <div class="space-y-4">
                     <div class="grid grid-cols-2 gap-4">
@@ -730,11 +708,6 @@
                             <p class="text-xs text-slate-500 font-bold mb-1">ÁREA</p>
                             <p class="text-lg font-bold text-blue-700">${registro.area_siglas}</p>
                         </div>
-                    </div>
-
-                    <div class="p-4 bg-slate-50 rounded-lg">
-                        <p class="text-xs text-slate-500 font-bold mb-2">ESTADO ACTUAL</p>
-                        <span class="badge-estado ${estadoClass}">${estado}</span>
                     </div>
 
                     <div class="p-4 bg-slate-50 rounded-lg">
@@ -800,20 +773,6 @@
 
                     <div>
                         <label class="block text-xs font-bold text-slate-700 mb-2">
-                            <i class="fas fa-traffic-light text-purple-600 mr-1"></i> ESTADO *
-                        </label>
-                        <select id="edit-estado" required
-                                class="w-full px-3 py-2 border-2 border-slate-200 rounded-lg focus:border-emerald-500 focus:outline-none text-sm">
-                            <option value="Pendiente" ${(!registro.estado || registro.estado === 'Pendiente') ? 'selected' : ''}>Pendiente</option>
-                            <option value="En Proceso" ${registro.estado === 'En Proceso' ? 'selected' : ''}>En Proceso</option>
-                            <option value="Atendido" ${registro.estado === 'Atendido' ? 'selected' : ''}>Atendido</option>
-                            <option value="Concluido" ${registro.estado === 'Concluido' ? 'selected' : ''}>Concluido</option>
-                            <option value="Cancelado" ${registro.estado === 'Cancelado' ? 'selected' : ''}>Cancelado</option>
-                        </select>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-slate-700 mb-2">
                             <i class="fas fa-folder text-emerald-600 mr-1"></i> HOMOCLAVE
                         </label>
                         <input type="text" id="edit-homoclave" value="${registro.homoclave || ''}"
@@ -858,7 +817,6 @@
 
             if (!registroEditando) return;
 
-            const estado = document.getElementById('edit-estado').value;
             const homoclave = document.getElementById('edit-homoclave').value.trim();
             const bitacora = document.getElementById('edit-bitacora').value.trim();
             const asunto = document.getElementById('edit-asunto').value.trim();
@@ -874,7 +832,6 @@
                 const { data, error } = await _sb
                     .from('registro_oficios')
                     .update({
-                        estado: estado,
                         homoclave: homoclave,
                         bitacora_referencia: bitacora,
                         asunto: asunto
@@ -923,7 +880,7 @@
         }
 
         // ==========================================
-        // FILTROS
+        // FILTROS (SIMPLIFICADO)
         // ==========================================
         function renderFiltros() {
             const areas = [...new Set(globalData.map(r => r.area_siglas))].sort();
@@ -935,9 +892,7 @@
         function filtrarTabla() {
             const searchText = document.getElementById('searchInput').value.toLowerCase();
             const filterArea = document.getElementById('filterArea').value;
-            const filterEstado = document.getElementById('filterEstado').value;
-            const fechaDesde = document.getElementById('filterFechaDesde').value;
-            const fechaHasta = document.getElementById('filterFechaHasta').value;
+            const filterFecha = document.getElementById('filterFecha').value;
 
             filteredData = globalData.filter(r => {
                 const matchText = searchText === '' || 
@@ -947,14 +902,10 @@
 
                 const matchArea = filterArea === '' || r.area_siglas === filterArea;
 
-                const estado = r.estado || 'Pendiente';
-                const matchEstado = filterEstado === '' || estado === filterEstado;
-
                 const fechaRegistro = new Date(r.fecha).toISOString().split('T')[0];
-                const matchFechaDesde = !fechaDesde || fechaRegistro >= fechaDesde;
-                const matchFechaHasta = !fechaHasta || fechaRegistro <= fechaHasta;
+                const matchFecha = !filterFecha || fechaRegistro === filterFecha;
 
-                return matchText && matchArea && matchEstado && matchFechaDesde && matchFechaHasta;
+                return matchText && matchArea && matchFecha;
             });
 
             renderTabla();
@@ -963,9 +914,7 @@
         function limpiarFiltros() {
             document.getElementById('searchInput').value = '';
             document.getElementById('filterArea').value = '';
-            document.getElementById('filterEstado').value = '';
-            document.getElementById('filterFechaDesde').value = '';
-            document.getElementById('filterFechaHasta').value = '';
+            document.getElementById('filterFecha').value = '';
             filteredData = [...globalData];
             renderTabla();
             mostrarAlerta('info', 'Filtros limpiados');
@@ -985,7 +934,6 @@
                 'Consecutivo': r.consecutivo,
                 'Año': r.anio,
                 'Área': r.area_siglas,
-                'Estado': r.estado || 'Pendiente',
                 'Homoclave': r.homoclave || '',
                 'Bitácora': r.bitacora_referencia || '',
                 'Asunto': r.asunto,
@@ -1044,7 +992,6 @@
             }, 5000);
         }
 
-        // Cerrar modal al hacer clic fuera
         window.onclick = function(event) {
             if (event.target.classList.contains('modal')) {
                 event.target.style.display = 'none';
