@@ -13,131 +13,232 @@
 
 <div class="p-6">
 
-    <h1 class="text-2xl font-bold text-slate-800 mb-6">
-        Dashboard Ejecutivo – Control Institucional
-    </h1>
+<h1 class="text-2xl font-bold text-slate-800 mb-6">
+Dashboard Ejecutivo – Control Institucional
+</h1>
 
-    <!-- KPIs -->
-    <div id="kpis" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8"></div>
+<!-- KPIs -->
+<div id="kpis" class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8"></div>
 
-    <!-- Gráficas -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+<!-- Gráficas -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
 
-        <div class="bg-white p-4 rounded shadow">
-            <h3 class="font-semibold mb-3">Tendencia Mensual</h3>
-            <canvas id="graficaMensual"></canvas>
-        </div>
+<div class="bg-white p-4 rounded shadow">
+<h3 class="font-semibold mb-3">Tendencia Mensual</h3>
+<canvas id="graficaMensual"></canvas>
+</div>
 
-        <div class="bg-white p-4 rounded shadow">
-            <h3 class="font-semibold mb-3">Distribución por Área</h3>
-            <canvas id="graficaAreas"></canvas>
-        </div>
+<div class="bg-white p-4 rounded shadow">
+<h3 class="font-semibold mb-3">Distribución por Área</h3>
+<canvas id="graficaAreas"></canvas>
+</div>
 
-    </div>
+</div>
 
-    <!-- Tabla Resumen -->
-    <div class="bg-white p-4 rounded shadow">
-        <h3 class="font-semibold mb-4">Resumen Ejecutivo por Área</h3>
-        <table class="w-full text-sm">
-            <thead class="bg-slate-100">
-                <tr>
-                    <th class="p-2 text-left">Área</th>
-                    <th class="p-2 text-left">Total</th>
-                    <th class="p-2 text-left">Mes Actual</th>
-                    <th class="p-2 text-left">% Participación</th>
-                </tr>
-            </thead>
-            <tbody id="tablaResumen"></tbody>
-        </table>
-    </div>
+<!-- TABLA OPERATIVA -->
+<div class="bg-white p-4 rounded shadow mb-8">
 
+<div class="flex justify-between mb-4">
+<h3 class="font-semibold">Registros</h3>
+<input type="text" id="searchInput" placeholder="Buscar asunto..."
+class="border p-2 rounded text-sm" oninput="cargarRegistros(0)">
+</div>
+
+<table class="w-full text-sm">
+<thead class="bg-slate-100">
+<tr>
+<th class="p-2 text-left">ID</th>
+<th class="p-2 text-left">Área</th>
+<th class="p-2 text-left">Asunto</th>
+<th class="p-2 text-left">Fecha</th>
+<th class="p-2 text-left">Acción</th>
+</tr>
+</thead>
+<tbody id="tablaRegistros"></tbody>
+</table>
+
+<div id="paginacion" class="flex justify-between items-center mt-4"></div>
+
+</div>
+
+</div>
+
+<!-- MODAL EDICIÓN -->
+<div id="modal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex items-center justify-center">
+<div class="bg-white p-6 rounded shadow w-96">
+
+<h3 class="font-semibold mb-4">Editar Registro</h3>
+
+<input type="hidden" id="edit_id">
+
+<label class="text-sm">Área</label>
+<input type="text" id="edit_area" class="border w-full p-2 mb-3 rounded">
+
+<label class="text-sm">Asunto</label>
+<input type="text" id="edit_asunto" class="border w-full p-2 mb-3 rounded">
+
+<label class="text-sm">Fecha</label>
+<input type="date" id="edit_fecha" class="border w-full p-2 mb-3 rounded">
+
+<div class="flex justify-end gap-2">
+<button onclick="cerrarModal()" class="px-3 py-1 bg-slate-300 rounded">Cancelar</button>
+<button onclick="guardarCambios()" class="px-3 py-1 bg-blue-600 text-white rounded">Guardar</button>
+</div>
+
+</div>
 </div>
 
 <script>
 
-// 🔹 CONFIGURACIÓN SUPABASE
+// CONFIG
 const supabaseUrl = "https://rnwksmgwmnjatrgezaaa.supabase.co";
 const supabaseKey = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InJud2tzbWd3bW5qYXRyZ2V6YWFhIiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njc5MTY1MTYsImV4cCI6MjA4MzQ5MjUxNn0.vQXfHnWRuCNOjbqX-iYragObPA9GyCw9z9RMsNLjEfE";
 const _sb = supabase.createClient(supabaseUrl, supabaseKey);
 
-// 🔹 CARGA GENERAL
+const PAGE_SIZE = 15;
+let currentPage = 0;
+let totalRegistros = 0;
+
+// CARGA DASHBOARD
 async function cargarDashboard() {
+const { data: kpis } = await _sb.rpc('dashboard_kpis');
+const { data: mensual } = await _sb.rpc('dashboard_mensual');
+const { data: areas } = await _sb.rpc('dashboard_areas');
 
-    const { data: kpis } = await _sb.rpc('dashboard_kpis');
-    const { data: mensual } = await _sb.rpc('dashboard_mensual');
-    const { data: areas } = await _sb.rpc('dashboard_areas');
-
-    renderKPIs(kpis[0]);
-    renderGraficaMensual(mensual);
-    renderGraficaAreas(areas);
-    renderTablaResumen(areas);
+renderKPIs(kpis[0]);
+renderGraficaMensual(mensual);
+renderGraficaAreas(areas);
 }
 
+// KPI
 function renderKPIs(data) {
-
-    const container = document.getElementById('kpis');
-
-    container.innerHTML = `
-        ${kpiCard('Total Histórico', data.total)}
-        ${kpiCard('Oficios Mes Actual', data.mes_actual)}
-        ${kpiCard('Promedio Diario', data.promedio_diario)}
-        ${kpiCard('% Crecimiento', data.crecimiento + '%')}
-    `;
+document.getElementById('kpis').innerHTML = `
+${kpiCard('Total Histórico', data.total)}
+${kpiCard('Mes Actual', data.mes_actual)}
+${kpiCard('Promedio Diario', data.promedio_diario)}
+${kpiCard('% Crecimiento', data.crecimiento + '%')}
+`;
 }
 
 function kpiCard(title, value) {
-    return `
-        <div class="bg-white p-4 rounded shadow">
-            <p class="text-xs text-slate-500">${title}</p>
-            <p class="text-2xl font-bold text-slate-800">${value}</p>
-        </div>
-    `;
+return `<div class="bg-white p-4 rounded shadow">
+<p class="text-xs text-slate-500">${title}</p>
+<p class="text-2xl font-bold">${value}</p>
+</div>`;
 }
 
+// GRÁFICAS
 function renderGraficaMensual(data) {
-
-    new Chart(document.getElementById('graficaMensual'), {
-        type: 'line',
-        data: {
-            labels: data.map(d => d.mes),
-            datasets: [{
-                label: 'Oficios',
-                data: data.map(d => d.total),
-                tension: 0.3
-            }]
-        }
-    });
+new Chart(document.getElementById('graficaMensual'), {
+type: 'line',
+data: {
+labels: data.map(d => d.mes),
+datasets: [{ label: 'Oficios', data: data.map(d => d.total), tension:0.3 }]
+}
+});
 }
 
 function renderGraficaAreas(data) {
-
-    new Chart(document.getElementById('graficaAreas'), {
-        type: 'bar',
-        data: {
-            labels: data.map(d => d.area_siglas),
-            datasets: [{
-                label: 'Total',
-                data: data.map(d => d.total)
-            }]
-        }
-    });
+new Chart(document.getElementById('graficaAreas'), {
+type: 'bar',
+data: {
+labels: data.map(d => d.area_siglas),
+datasets: [{ label: 'Total', data: data.map(d => d.total) }]
+}
+});
 }
 
-function renderTablaResumen(data) {
+// TABLA CON PAGINACIÓN
+async function cargarRegistros(page=0) {
 
-    const tbody = document.getElementById('tablaResumen');
+const searchText = document.getElementById('searchInput').value;
 
-    tbody.innerHTML = data.map(d => `
-        <tr class="border-t">
-            <td class="p-2">${d.area_siglas}</td>
-            <td class="p-2">${d.total}</td>
-            <td class="p-2">${d.mes_actual}</td>
-            <td class="p-2">${d.porcentaje}%</td>
-        </tr>
-    `).join('');
+const from = page * PAGE_SIZE;
+const to = from + PAGE_SIZE - 1;
+
+let query = _sb
+.from('registro_oficios')
+.select('id, area_siglas, asunto, fecha', { count: 'exact' })
+.order('fecha', { ascending: false })
+.range(from, to);
+
+if(searchText)
+query = query.ilike('asunto', `%${searchText}%`);
+
+const { data, count } = await query;
+
+currentPage = page;
+totalRegistros = count;
+
+renderTabla(data);
+renderPaginacion();
+}
+
+function renderTabla(data) {
+document.getElementById('tablaRegistros').innerHTML =
+data.map(d=>`
+<tr class="border-t">
+<td class="p-2">${d.id}</td>
+<td class="p-2">${d.area_siglas}</td>
+<td class="p-2">${d.asunto}</td>
+<td class="p-2">${d.fecha}</td>
+<td class="p-2">
+<button onclick="abrirModal(${d.id}, '${d.area_siglas}', '${d.asunto.replace(/'/g,"")}', '${d.fecha}')"
+class="text-blue-600 text-sm">Editar</button>
+</td>
+</tr>
+`).join('');
+}
+
+function renderPaginacion() {
+
+const totalPaginas = Math.ceil(totalRegistros / PAGE_SIZE);
+
+document.getElementById('paginacion').innerHTML = `
+<span class="text-sm">Página ${currentPage+1} de ${totalPaginas}</span>
+<div class="flex gap-2">
+<button ${currentPage===0?'disabled':''}
+onclick="cargarRegistros(${currentPage-1})"
+class="px-3 py-1 bg-slate-200 rounded">Anterior</button>
+
+<button ${(currentPage+1)>=totalPaginas?'disabled':''}
+onclick="cargarRegistros(${currentPage+1})"
+class="px-3 py-1 bg-slate-200 rounded">Siguiente</button>
+</div>`;
+}
+
+// MODAL
+function abrirModal(id, area, asunto, fecha){
+document.getElementById('modal').classList.remove('hidden');
+document.getElementById('edit_id').value=id;
+document.getElementById('edit_area').value=area;
+document.getElementById('edit_asunto').value=asunto;
+document.getElementById('edit_fecha').value=fecha;
+}
+
+function cerrarModal(){
+document.getElementById('modal').classList.add('hidden');
+}
+
+async function guardarCambios(){
+
+const id = document.getElementById('edit_id').value;
+const area = document.getElementById('edit_area').value;
+const asunto = document.getElementById('edit_asunto').value;
+const fecha = document.getElementById('edit_fecha').value;
+
+await _sb
+.from('registro_oficios')
+.update({ area_siglas:area, asunto:asunto, fecha:fecha })
+.eq('id', id);
+
+cerrarModal();
+cargarRegistros(currentPage);
+cargarDashboard();
 }
 
 cargarDashboard();
+cargarRegistros();
 
 </script>
 
