@@ -47,7 +47,7 @@ class="border p-2 rounded text-sm" oninput="cargarRegistros(0)">
 <table class="w-full text-sm">
 <thead class="bg-slate-100">
 <tr>
-<th class="p-2 text-left">ID</th>
+<th class="p-2 text-left">Determinante</th>
 <th class="p-2 text-left">Área</th>
 <th class="p-2 text-left">Asunto</th>
 <th class="p-2 text-left">Fecha</th>
@@ -158,7 +158,7 @@ const to = from + PAGE_SIZE - 1;
 
 let query = _sb
 .from('registro_oficios')
-.select('id, area_siglas, asunto, fecha', { count: 'exact' })
+.select('determinante, area_siglas, asunto, fecha', { count: 'exact' })
 .order('fecha', { ascending: false })
 .range(from, to);
 
@@ -178,12 +178,12 @@ function renderTabla(data) {
 document.getElementById('tablaRegistros').innerHTML =
 data.map(d=>`
 <tr class="border-t">
-<td class="p-2">${d.id}</td>
+<td class="p-2">${d.determinante}</td>
 <td class="p-2">${d.area_siglas}</td>
 <td class="p-2">${d.asunto}</td>
 <td class="p-2">${d.fecha}</td>
 <td class="p-2">
-<button onclick="abrirModal(${d.id}, '${d.area_siglas}', '${d.asunto.replace(/'/g,"")}', '${d.fecha}')"
+<button onclick="abrirModal(${d.determinante}, '${d.area_siglas}', '${d.asunto.replace(/'/g,"")}', '${d.fecha}')"
 class="text-blue-600 text-sm">Editar</button>
 </td>
 </tr>
@@ -210,7 +210,7 @@ class="px-3 py-1 bg-slate-200 rounded">Siguiente</button>
 // MODAL
 function abrirModal(id, area, asunto, fecha){
 document.getElementById('modal').classList.remove('hidden');
-document.getElementById('edit_id').value=id;
+document.getElementById('edit_id').value=determinante;
 document.getElementById('edit_area').value=area;
 document.getElementById('edit_asunto').value=asunto;
 document.getElementById('edit_fecha').value=fecha;
