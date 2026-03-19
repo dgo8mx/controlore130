@@ -390,7 +390,29 @@ const UNIDADES=["DG","ST","ES","VO","VS","AR","GA","CU","SF","DA","CC","UJ","IA"
 const MESES=['Ene','Feb','Mar','Abr','May','Jun','Jul','Ago','Sep','Oct','Nov','Dic'];
 const ACOLOR={DG:'#0d7a5f',ST:'#1e50a2',ES:'#b5852e',VO:'#8c1c3a',VS:'#0891b2',AR:'#7c3aed',GA:'#059669',CU:'#d97706',SF:'#dc2626',DA:'#0f766e',CC:'#be185d',UJ:'#65a30d',IA:'#6366f1'};
 
-/* STATE */
+/* ── Helper fecha — robusto ante null/undefined/ISO/date-only ── */
+function parseFecha(f){
+  if(!f) return null;
+  // Supabase puede devolver '2026-01-15', '2026-01-15T00:00:00', '2026-01-15T00:00:00+00:00'
+  // Tomamos solo los primeros 10 caracteres (YYYY-MM-DD) y construimos con hora local mediodía
+  const s = String(f).substring(0,10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  const [y,mo,d] = s.split('-').map(Number);
+  return new Date(y, mo-1, d, 12, 0, 0); // hora local → sin desfase UTC
+}
+function fmtFecha(f, opts){
+  const d = parseFecha(f);
+  if(!d || isNaN(d)) return '—';
+  return d.toLocaleDateString('es-MX', opts||{day:'2-digit',month:'short',year:'numeric'});
+}
+function fmtFechaLarga(f){
+  return fmtFecha(f,{weekday:'long',day:'numeric',month:'long',year:'numeric'});
+}
+function fmtFechaExcel(f){
+  const d=parseFecha(f);
+  if(!d||isNaN(d))return '';
+  return d.toLocaleDateString('es-MX');
+}
 let _sb=null,gData=[],fData=[],pg=1,pgsz=50,sF='fecha',sD='desc',fDeb=null,chart=null,cfilt=null,aRec=null,isNew=false,cTab='edit';
 let starred=new Set(JSON.parse(localStorage.getItem('mrv_starred')||'[]'));
 
@@ -447,8 +469,8 @@ function renderKPIs(){
   document.getElementById('kH').innerText=gData.filter(r=>r.fecha?.startsWith(hoy)).length;
   document.getElementById('kHf').innerText=new Date().toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long'});
   const now=new Date(),m=now.getMonth(),a=now.getFullYear();
-  const inM=r=>{const d=new Date(r.fecha+'T12:00:00');return d.getMonth()===m&&d.getFullYear()===a;};
-  const inA=r=>{const d=new Date(r.fecha+'T12:00:00');const pm=m===0?11:m-1,pa=m===0?a-1:a;return d.getMonth()===pm&&d.getFullYear()===pa;};
+  const inM=r=>{const d=parseFecha(r.fecha);return d&&d.getMonth()===m&&d.getFullYear()===a;};
+  const inA=r=>{const d=parseFecha(r.fecha);if(!d)return false;const pm=m===0?11:m-1,pa=m===0?a-1:a;return d.getMonth()===pm&&d.getFullYear()===pa;};
   const mc=gData.filter(inM).length,ac=gData.filter(inA).length;
   document.getElementById('kM').innerText=mc;
   document.getElementById('kMs').innerText=now.toLocaleDateString('es-MX',{month:'long',year:'numeric'});
@@ -465,7 +487,8 @@ function getSrc(){
   const p=document.getElementById('chPer').value,now=new Date();
   return gData.filter(r=>{
     if(!r.fecha)return false;
-    const d=new Date(r.fecha+'T12:00:00');
+    const d=parseFecha(r.fecha);
+    if(!d)return false;
     if(p==='2026')return d.getFullYear()===2026;
     if(p==='mes')return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();
     if(p==='mes-1'){const pm=now.getMonth()===0?11:now.getMonth()-1,pa=now.getMonth()===0?now.getFullYear()-1:now.getFullYear();return d.getMonth()===pm&&d.getFullYear()===pa;}
@@ -567,7 +590,7 @@ function renderTable(){
   const st=(pg-1)*pgsz,sl=fData.slice(st,st+pgsz);
   document.getElementById('pgInd').innerText=`· ${st+1}–${Math.min(st+pgsz,tot)}`;
   tb.innerHTML=sl.map(r=>{
-    const fecha=r.fecha?new Date(r.fecha+'T12:00:00').toLocaleDateString('es-MX',{day:'2-digit',month:'short',year:'numeric'}):'—';
+    const fecha=fmtFecha(r.fecha);
     const col=ACOLOR[r.area_siglas]||'#6d8278';
     const isS=starred.has(r.id);
     const asunto=(r.asunto||'').substring(0,90)+((r.asunto||'').length>90?'…':'');
@@ -669,7 +692,7 @@ function renderEdit(body){
 function renderDetail(body){
   const r=aRec||{};
   const col=ACOLOR[r.area_siglas]||'#6d8278';
-  const fecha=r.fecha?new Date(r.fecha+'T12:00:00').toLocaleDateString('es-MX',{weekday:'long',day:'numeric',month:'long',year:'numeric'}):'—';
+  const fecha=fmtFechaLarga(r.fecha);
   body.innerHTML=`
   <div class="fade-in">
     <div style="margin-bottom:18px">
@@ -798,7 +821,7 @@ function mkSheet(src){
       rec.homoclave||'',
       rec.bitacora_referencia||'',
       rec.asunto||'',
-      rec.fecha?new Date(rec.fecha+'T12:00:00').toLocaleDateString('es-MX'):''
+      fmtFechaExcel(rec.fecha)
     ];
     rowData.forEach((v,ci)=>{
       const addr = XLSX.utils.encode_cell({r:ri+1,c:ci});
@@ -830,7 +853,7 @@ function mkResumenSheet(){
   // Filas por unidad
   areas.forEach((u,ri)=>{
     const all=gData.filter(r=>r.area_siglas===u);
-    const mes=all.filter(r=>{const d=new Date((r.fecha||'')+'T12:00:00');return d.getMonth()===m&&d.getFullYear()===a;});
+    const mes=all.filter(r=>{const d=parseFecha(r.fecha);return d&&d.getMonth()===m&&d.getFullYear()===a;});
     const even=ri%2===0;
     const vals=[u, all.length, mes.length, ((all.length/(gData.length||1))*100).toFixed(1)+'%'];
     vals.forEach((v,ci)=>{
@@ -842,7 +865,7 @@ function mkResumenSheet(){
 
   // Fila TOTAL
   const totR=areas.length+1;
-  const totMes=gData.filter(r=>{const d=new Date((r.fecha||'')+'T12:00:00');return d.getMonth()===m&&d.getFullYear()===a;}).length;
+  const totMes=gData.filter(r=>{const d=parseFecha(r.fecha);return d&&d.getMonth()===m&&d.getFullYear()===a;}).length;
   const totVals=['▸ TOTAL', gData.length, totMes, '100%'];
   totVals.forEach((v,ci)=>{
     const isNum=ci===1||ci===2;
