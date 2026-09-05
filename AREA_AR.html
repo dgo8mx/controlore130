@@ -1069,38 +1069,83 @@
             
             mostrarCargando(true, 'Sincronizando...');
             
+            let exitosos = 0;
+            let fallidosDefinitivos = [];
+            
             try {
                 await cargarUltimoConsecutivoNube();
                 
-                const datos = registrosPendientes.map(r => ({
-                    determinante: r.determinante,
-                    consecutivo: r.consecutivo,
-                    anio: r.anio,
-                    area_siglas: r.area_siglas,
-                    homoclave: r.homoclave || null,
-                    bitacora_referencia: r.bitacora_referencia || null,
-                    asunto: r.asunto,
-                    fecha: r.fecha
-                }));
-                
-                const { error } = await _sb
-                    .from('registro_oficios')
-                    .insert(datos);
-                
-                if (error) throw error;
-                
-                // Actualizar registros sincronizados
-                registrosPendientes.forEach(regPend => {
-                    const idx = todosLosRegistros.findIndex(r => r.determinante === regPend.determinante);
-                    if (idx !== -1) {
-                        todosLosRegistros[idx].sincronizado = true;
-                        todosLosRegistros[idx].bloqueado = true;
-                        todosLosRegistros[idx].origen = 'nube';
+                // Se sincroniza registro por registro (en lugar de un solo insert masivo).
+                // Así, si un folio ya existe en la nube (choque entre dos PCs que
+                // capturaron al mismo tiempo), solo ese registro se corrige
+                // regenerando su consecutivo, en vez de tirar toda la sincronización.
+                for (let i = 0; i < registrosPendientes.length; i++) {
+                    let reg = registrosPendientes[i];
+                    let intentos = 0;
+                    let ok = false;
+                    let ultimoError = null;
+                    
+                    while (!ok && intentos < 5) {
+                        intentos++;
+                        
+                        const payload = {
+                            determinante: reg.determinante,
+                            consecutivo: reg.consecutivo,
+                            anio: reg.anio,
+                            area_siglas: reg.area_siglas,
+                            homoclave: reg.homoclave || null,
+                            bitacora_referencia: reg.bitacora_referencia || null,
+                            asunto: reg.asunto,
+                            fecha: reg.fecha
+                        };
+                        
+                        mostrarCargando(true, `Sincronizando ${i + 1} de ${registrosPendientes.length}...`);
+                        
+                        const { error } = await _sb
+                            .from('registro_oficios')
+                            .insert(payload);
+                        
+                        if (!error) {
+                            ok = true;
+                            exitosos++;
+                            
+                            const idx = todosLosRegistros.findIndex(r => r.id === reg.id);
+                            if (idx !== -1) {
+                                todosLosRegistros[idx].determinante = reg.determinante;
+                                todosLosRegistros[idx].consecutivo = reg.consecutivo;
+                                todosLosRegistros[idx].sincronizado = true;
+                                todosLosRegistros[idx].bloqueado = true;
+                                todosLosRegistros[idx].origen = 'nube';
+                            }
+                        } else if (error.code === '23505') {
+                            // Folio duplicado (otra PC ya sincronizó ese consecutivo).
+                            // Se regenera el folio de ESTE registro con el
+                            // siguiente número disponible y se reintenta.
+                            console.warn(`Folio duplicado: ${reg.determinante}. Regenerando folio...`);
+                            await cargarUltimoConsecutivoNube();
+                            const nuevoConsecutivo = Math.max(ultimoConsecutivoNube, reg.consecutivo) + 1;
+                            const nuevoDeterminante = `OR-130/${AREA_SIGLAS}/${String(nuevoConsecutivo).padStart(4, '0')}/${reg.anio}`;
+                            
+                            reg.consecutivo = nuevoConsecutivo;
+                            reg.determinante = nuevoDeterminante;
+                            ultimoConsecutivoNube = nuevoConsecutivo;
+                            // el while vuelve a intentar con el nuevo folio
+                        } else {
+                            // Otro tipo de error (de red, de permisos, etc.):
+                            // no tiene sentido reintentar automáticamente.
+                            ultimoError = error;
+                            break;
+                        }
                     }
-                });
+                    
+                    if (!ok) {
+                        fallidosDefinitivos.push(reg);
+                        console.error(`No se pudo sincronizar ${reg.determinante}:`, ultimoError || 'máximo de reintentos alcanzado');
+                    }
+                }
                 
-                const cantSincronizados = registrosPendientes.length;
-                registrosPendientes = [];
+                // Solo quedan pendientes los que realmente fallaron
+                registrosPendientes = fallidosDefinitivos;
                 guardarPendientesLocal();
                 
                 await cargarUltimoConsecutivoNube();
@@ -1111,7 +1156,11 @@
                 actualizarVistaProximoFolio();
                 actualizarUltimaSincronizacion();
                 
-                mostrarAlerta('success', `${cantSincronizados} registros sincronizados exitosamente`);
+                if (fallidosDefinitivos.length === 0) {
+                    mostrarAlerta('success', `${exitosos} registros sincronizados exitosamente`);
+                } else {
+                    mostrarAlerta('warning', `${exitosos} sincronizados. ${fallidosDefinitivos.length} quedaron pendientes por error (revise la consola).`);
+                }
             } catch (e) {
                 console.error("Error sync:", e);
                 mostrarAlerta('error', 'Error al sincronizar: ' + e.message);
