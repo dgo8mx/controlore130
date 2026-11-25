@@ -437,34 +437,120 @@ async function probarConn(){
 function setConn(c,t){const m={b:'#3b82f6',g:'#10b981',r:'#ef4444'};const d=document.getElementById('cdot');d.style.background=m[c]||'#6b7280';d.className='cdot'+(c==='b'?' pulse':'');document.getElementById('clbl').innerText=t;}
 function setDB(t,c){const e=document.getElementById('kDB');e.innerText=t;e.style.color=c;}
 
-/* FETCH */
+
+/* FETCH — CARGA COMPLETA POR BLOQUES */
 async function fetchData(){
-  const ic=document.getElementById('sico');ic.classList.add('spin');
+
+  const ic=document.getElementById('sico');
+  ic.classList.add('spin');
+
   try{
 
-const B=1000,all=[];
-let i=0, huboMas=true;
-while(huboMas){
-  const{data,error}=await _sb.from('registro_oficios')
-    .select('id,fecha,determinante,area_siglas,bitacora_referencia,homoclave,asunto,consecutivo,anio')
-    .order('fecha',{ascending:false}).range(i*B,(i+1)*B-1);
-  if(error)throw error;
-  all.push(...(data||[]));
-  huboMas = (data||[]).length === B; // sigue mientras la página venga llena
-  i++;
-}
+    const B=500;
+    const all=[];
+    let desde=0;
+    let huboMas=true;
 
-    
-    gData=all;fData=[...all];pg=1;
-    renderKPIs();popArea();renderChart();renderTable();renderPg();renderAF();
+    // Total real disponible en Supabase
+    const {count,error:countError} = await _sb
+      .from('registro_oficios')
+      .select('id',{count:'exact',head:true});
+
+    if(countError) throw countError;
+
+    // Descargar todos los registros por bloques
+    while(huboMas){
+
+      const {data,error} = await _sb
+        .from('registro_oficios')
+        .select(`
+          id,
+          fecha,
+          determinante,
+          area_siglas,
+          bitacora_referencia,
+          homoclave,
+          asunto,
+          consecutivo,
+          anio
+        `)
+        .order('fecha',{ascending:false})
+        .order('id',{ascending:true})
+        .range(desde,desde+B-1);
+
+      if(error) throw error;
+
+      if(!data || data.length===0){
+        huboMas=false;
+        break;
+      }
+
+      all.push(...data);
+
+      desde += data.length;
+
+      // Terminar al alcanzar el total esperado
+      huboMas = data.length===B && all.length<count;
+
+      console.log(
+        'Registros descargados:',
+        all.length,
+        'de',
+        count
+      );
+
+    }
+
+    // Verificar integridad de la descarga
+    if(all.length !== count){
+      throw new Error(
+        `Carga incompleta: ${all.length} de ${count} registros.`
+      );
+    }
+
+    // Actualizar información global
+    gData=all;
+    fData=[...all];
+    pg=1;
+
+    renderKPIs();
+    popArea();
+    renderChart();
+    renderTable();
+    renderPg();
+    renderAF();
+
     const now=new Date().toLocaleString('es-MX');
+
     document.getElementById('kSync').innerText='Sync: '+now;
     document.getElementById('fSync').innerText=now;
+
+    toast(
+      's',
+      `Carga completa: ${all.length.toLocaleString()} registros`
+    );
+
   }catch(err){
+
+    console.error('Error de carga:',err);
+
     toast('e','Carga fallida: '+err.message);
-    document.getElementById('tBody').innerHTML=`<tr><td colspan="9" class="estate"><i class="fas fa-exclamation-triangle"></i><p>${err.message}</p></td></tr>`;
-  }finally{ic.classList.remove('spin');}
+
+    document.getElementById('tBody').innerHTML=`
+      <tr>
+        <td colspan="9" class="estate">
+          <i class="fas fa-exclamation-triangle"></i>
+          <p>${err.message}</p>
+        </td>
+      </tr>`;
+
+  }finally{
+
+    ic.classList.remove('spin');
+
+  }
 }
+
 
 /* KPIs */
 function renderKPIs(){
